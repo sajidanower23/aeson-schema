@@ -141,8 +141,9 @@ examples testCase assertValid' assertInvalid' =
           "a": {
             "disallow": [{
               "properties": {
-                "b": { "type": "any", "required": true }
-              }
+                "b": { "type": "any" }
+              },
+              "required": [ "b" ]
             }]
           }
         }
@@ -159,8 +160,9 @@ examples testCase assertValid' assertInvalid' =
         "extends": [
           {
             "properties": {
-              "a": { "required": true }
-            }
+              "a": { }
+            },
+            "required": [ "a" ]
           },
           {
             "patternProperties": {

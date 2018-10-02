@@ -348,14 +348,14 @@ generateObject decName name schema = case (propertiesList, schemaAdditionalPrope
                    , [| Just . $toExpr |]
                    , Just $ valD (conP 'Success [varP defaultName]) (normalB [| parse $fromExpr $(lift defaultValue) |]) []
                    )
-          Nothing -> return $ if schemaRequired propertySchema
+          Nothing -> return $ {- if schemaRequired propertySchema -- TODO
             then ( propertyName
                  , typ
                  , [| maybe (fail $(lift $ "required property " ++ unpack fieldName ++ " missing")) $fromExpr $lookupProperty |]
                  , [| Just . $toExpr |]
                  , Nothing
                  )
-            else ( propertyName
+            else  -}( propertyName
                  , conT ''Maybe `appT` typ
                  , [| traverse $fromExpr $lookupProperty |]
                  , [| fmap $toExpr |]

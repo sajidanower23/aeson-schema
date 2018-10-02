@@ -95,7 +95,7 @@ instance Lift SchemaType where
   lift NullType    = [| NullType |]
   lift AnyType     = [| AnyType |]
 
--- | JSON Schema (Draft 3) Core Schema Definition
+-- | JSON Schema (Draft 4) Core Schema Definition
 data Schema ref = Schema
   { schemaType                 :: [Choice2 SchemaType (Schema ref)]          -- ^ List of allowed schema types
   , schemaProperties           :: HashMap Text (Schema ref)                  -- ^ Subschemas for properties
@@ -103,7 +103,7 @@ data Schema ref = Schema
   , schemaAdditionalProperties :: Choice2 Bool (Schema ref)                  -- ^ Whether additional properties are allowed when the instance is an object, and if so, a schema that they have to validate against
   , schemaItems                :: Maybe (Choice2 (Schema ref) [Schema ref])  -- ^ Either a schema for all array items or a different schema for each position in the array
   , schemaAdditionalItems      :: Choice2 Bool (Schema ref)                  -- ^ Whether additional items are allowed
-  , schemaRequired             :: Bool                                       -- ^ When this schema is used in a property of another schema, this means that the property must have a value and not be undefined
+  , schemaRequired             :: [Text]                                     -- ^ An object instance is valid against this keyword if every item in the array is the name of a property in the instance
   , schemaDependencies         :: HashMap Text (Choice2 [Text] (Schema ref)) -- ^ Map of dependencies (property a requires properties b and c, property a requires the instance to validate against another schema, etc.)
   , schemaMinimum              :: Maybe Scientific                           -- ^ Minimum value when the instance is a number
   , schemaMaximum              :: Maybe Scientific                           -- ^ Maximum value when the instance is a number
@@ -176,7 +176,7 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> (parseField "additionalProperties" .!= Choice1of2 True)
     <*> parseField "items"
     <*> (parseField "additionalItems" .!= Choice1of2 True)
-    <*> parseFieldDefault "required" (Bool False)
+    <*> parseFieldDefault "required" emptyArray
     <*> (traverse parseDependency =<< parseFieldDefault "dependencies" emptyObject)
     <*> parseField "minimum"
     <*> parseField "maximum"
@@ -269,7 +269,7 @@ empty = Schema
   , schemaAdditionalProperties = Choice1of2 True
   , schemaItems = Nothing
   , schemaAdditionalItems = Choice1of2 True
-  , schemaRequired = False
+  , schemaRequired = []
   , schemaDependencies = H.empty
   , schemaMinimum = Nothing
   , schemaMaximum = Nothing

@@ -135,7 +135,7 @@ validateInteger schema num =
 validateObject :: Ord ref => Graph Schema ref -> Schema ref -> A.Object -> [ValidationError]
 validateObject graph schema obj =
   concatMap (uncurry checkKeyValue) (H.toList obj) ++
-  concatMap checkRequiredProperty requiredProperties
+  concatMap checkRequiredProperty (schemaRequired schema)
   where
     checkKeyValue k v = L.concat
       [ maybeCheck (flip (validate graph) v) property
@@ -156,7 +156,7 @@ validateObject graph schema obj =
             Nothing -> validationError $ "property " ++ unpack k ++ " depends on property " ++ show prop
             Just _ -> valid
           Choice2of2 depSchema -> validate graph depSchema (Object obj)
-    requiredProperties = map fst . filter (schemaRequired . snd) . H.toList $ schemaProperties schema
+          
     checkRequiredProperty key = case H.lookup key obj of
       Nothing -> validationError $ "required property " ++ unpack key ++ " is missing"
       Just _ -> valid

@@ -8,8 +8,8 @@ import           TestSuite.Types                   (SchemaTest(..), readSchemaTe
 
 allTests :: IO [SchemaTest]
 allTests = do
-  requiredTests <- readSchemaTests "test/test-suite/tests/draft3"
-  optionalTests <- readSchemaTests "test/test-suite/tests/draft3/optional"
+  requiredTests <- readSchemaTests "test/test-suite/tests/draft4"
+  optionalTests <- readSchemaTests "test/test-suite/tests/draft4/optional"
   return $ requiredTests ++ optionalTests
 
 
@@ -23,20 +23,20 @@ main = do
     --, testGroup "Data.Aeson.Schema.Choice" Data.Aeson.Schema.Choice.Tests.tests
     ]
 
-runTest :: String -> IO ()
-runTest tc = do
-    at <- allTests
-    let schemaTests = findTest at
-    if length schemaTests == 0
-        then fail "test not found"
-        else
-            defaultMain
-              [
-                testGroup "Data.Aeson.Schema.Validator" $ Data.Aeson.Schema.Validator.Tests.tests schemaTests
-                , buildTest $ testGroup "Data.Aeson.Schema.CodeGen" <$> Data.Aeson.Schema.CodeGen.Tests.tests schemaTests
-              ]
+-- runTest :: String -> IO ()
+-- runTest tc = do
+--     at <- allTests
+--     let schemaTests = findTest at
+--     if length schemaTests == 0
+--         then fail "test not found"
+--         else
+--             defaultMain
+--               [
+--                 testGroup "Data.Aeson.Schema.Validator" $ Data.Aeson.Schema.Validator.Tests.tests schemaTests
+--                 , buildTest $ testGroup "Data.Aeson.Schema.CodeGen" <$> Data.Aeson.Schema.CodeGen.Tests.tests schemaTests
+--               ]
 
 
-  where
-    name = T.pack tc
-    findTest tests = filter (\t -> schemaTestDescription t == name) tests
+--   where
+--     name = T.pack tc
+--     findTest tests = filter (\t -> schemaTestDescription t == name) tests
