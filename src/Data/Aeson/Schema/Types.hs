@@ -57,6 +57,17 @@ instance FromJSON Pattern where
 instance Lift Pattern where
   lift (Pattern src _) = [| let Right p = mkPattern src in p |]
 
+-- parseJSONLimit :: Text -> Value -> Parser (Maybe Limit)
+parseJSONLimit d o = do
+  r <- o .:? ("exclusive" <> d)
+  case r of
+    Nothing -> do
+      r <- o .:? d
+      case r of
+        Nothing -> pure Nothing
+        Just n -> pure . Just $ (n, False)
+    Just n -> pure . Just $ (n, True)
+
 -- | Compile a regex to a pattern, reporting errors with fail
 mkPattern :: (Monad m) => Text -> m Pattern
 mkPattern t = liftM (Pattern t) $ makeRegexM (unpack t)
@@ -105,10 +116,8 @@ data Schema ref = Schema
   , schemaAdditionalItems      :: Choice2 Bool (Schema ref)                  -- ^ Whether additional items are allowed
   , schemaRequired             :: [Text]                                     -- ^ An object instance is valid against this keyword if every item in the array is the name of a property in the instance
   , schemaDependencies         :: HashMap Text (Choice2 [Text] (Schema ref)) -- ^ Map of dependencies (property a requires properties b and c, property a requires the instance to validate against another schema, etc.)
-  , schemaMinimum              :: Maybe Scientific                           -- ^ Minimum value when the instance is a number
-  , schemaMaximum              :: Maybe Scientific                           -- ^ Maximum value when the instance is a number
-  , schemaExclusiveMinimum     :: Bool                                       -- ^ Whether the minimum value is exclusive (only numbers greater than the minimum are allowed)
-  , schemaExclusiveMaximum     :: Bool                                       -- ^ Whether the maximum value is exclusive (only numbers less than the maximum are allowed)
+  , schemaMinimum              :: Maybe (Scientific, Bool)                   -- ^ Minimum value when the instance is a number, whether or not it's exclusive
+  , schemaMaximum              :: Maybe (Scientific, Bool)                   -- ^ Maximum value when the instance is a number, whether or not it's exclusive
   , schemaMinItems             :: Int                                        -- ^ Minimum length for arrays
   , schemaMaxItems             :: Maybe Int                                  -- ^ Maximum length for arrays
   , schemaUniqueItems          :: Bool                                       -- ^ Whether all array items must be distinct from each other
@@ -178,10 +187,8 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> (parseField "additionalItems" .!= Choice1of2 True)
     <*> parseFieldDefault "required" emptyArray
     <*> (traverse parseDependency =<< parseFieldDefault "dependencies" emptyObject)
-    <*> parseField "minimum"
-    <*> parseField "maximum"
-    <*> parseFieldDefault "exclusiveMinimum" (Bool False)
-    <*> parseFieldDefault "exclusiveMaximum" (Bool False)
+    <*> parseJSONLimit "minimum" o
+    <*> parseJSONLimit "maximum" o
     <*> parseFieldDefault "minItems" (Number 0)
     <*> parseField "maxItems"
     <*> parseFieldDefault "uniqueItems" (Bool False)
@@ -217,7 +224,8 @@ instance FromJSON ref => FromJSON (Schema ref) where
       parseDependency :: FromJSON ref => Value -> Parser (Choice2 [Text] (Schema ref))
       parseDependency (String s) = return $ Choice1of2 [s]
       parseDependency val = parseJSON val
-  parseJSON _ = fail "a schema must be a JSON object"
+  parseJSON (Bool b) = pure empty
+  parseJSON _ = fail $ "a schema must be a JSON Object or a Bool"
 
 instance (Eq ref, Lift ref) => Lift (Schema ref) where
   lift schema = case updates of
@@ -235,8 +243,6 @@ instance (Eq ref, Lift ref) => Lift (Schema ref) where
         , field 'schemaDependencies schemaDependencies
         , field 'schemaMinimum schemaMinimum
         , field 'schemaMaximum schemaMaximum
-        , field 'schemaExclusiveMinimum schemaExclusiveMinimum
-        , field 'schemaExclusiveMaximum schemaExclusiveMaximum
         , field 'schemaMinItems schemaMinItems
         , field 'schemaMaxItems schemaMaxItems
         , field 'schemaUniqueItems schemaUniqueItems
@@ -273,8 +279,6 @@ empty = Schema
   , schemaDependencies = H.empty
   , schemaMinimum = Nothing
   , schemaMaximum = Nothing
-  , schemaExclusiveMinimum = False
-  , schemaExclusiveMaximum = False
   , schemaMinItems = 0
   , schemaMaxItems = Nothing
   , schemaUniqueItems = False
