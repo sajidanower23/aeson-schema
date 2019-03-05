@@ -8,8 +8,8 @@ import           TestSuite.Types                   (SchemaTest(..), readSchemaTe
 
 allTests :: IO [SchemaTest]
 allTests = do
-  requiredTests <- readSchemaTests "test/test-suite/tests/draft4"
-  optionalTests <- readSchemaTests "test/test-suite/tests/draft4/optional"
+  requiredTests <- readSchemaTests "test/test-suite/tests/draft7"
+  optionalTests <- readSchemaTests "test/test-suite/tests/draft7/optional"
   return $ requiredTests ++ optionalTests
 
 

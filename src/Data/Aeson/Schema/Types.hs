@@ -95,7 +95,7 @@ instance Lift SchemaType where
   lift NullType    = [| NullType |]
   lift AnyType     = [| AnyType |]
 
--- | JSON Schema (Draft 4) Core Schema Definition
+-- | JSON Schema (Draft 7) Core Schema Definition
 data Schema ref = Schema
   { schemaType                 :: [Choice2 SchemaType (Schema ref)]          -- ^ List of allowed schema types
   , schemaProperties           :: HashMap Text (Schema ref)                  -- ^ Subschemas for properties
