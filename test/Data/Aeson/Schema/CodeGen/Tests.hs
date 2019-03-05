@@ -152,12 +152,16 @@ arbitrarySchema depth = do
           Just mini -> fmap ((+ mini) . abs) <$> arbitrary
         exclusiveMinimum <- if isNothing sMinimum then return False else arbitrary
         exclusiveMaximum <- if isNothing sMaximum then return False else arbitrary
+        finalMin <- pure $ case sMinimum of
+          Nothing -> Nothing
+          Just n -> Just (n, exclusiveMinimum)
+        finalMax <- pure $ case sMaximum of
+          Nothing -> Nothing
+          Just n -> Just (n, exclusiveMaximum)
         divisibleBy <- arbitrary
         return $ sch
-          { schemaMinimum = sMinimum
-          , schemaMaximum = sMaximum
-          , schemaExclusiveMinimum = exclusiveMinimum
-          , schemaExclusiveMaximum = exclusiveMaximum
+          { schemaMinimum = finalMin
+          , schemaMaximum = finalMax
           , schemaDivisibleBy = divisibleBy
           }
 

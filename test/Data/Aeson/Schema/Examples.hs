@@ -22,8 +22,7 @@ examples testCase assertValid' assertInvalid' =
         "properties": {
           "positiveNumber": {
             "type": "number",
-            "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": 0
           }
         },
         "patternProperties": {

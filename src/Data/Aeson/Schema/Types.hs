@@ -57,10 +57,11 @@ instance FromJSON Pattern where
 instance Lift Pattern where
   lift (Pattern src _) = [| let Right p = mkPattern src in p |]
 
-parseJSONLimit :: FromJSON a
-               => Text
+type Limit = (Scientific, Bool)
+
+parseJSONLimit :: Text
                -> Object
-               -> Parser (Maybe (a, Bool))
+               -> Parser (Maybe Limit)
 parseJSONLimit d o = do
   r <- o .:? ("exclusive" <> d)
   case r of
@@ -119,8 +120,8 @@ data Schema ref = Schema
   , schemaAdditionalItems      :: Choice2 Bool (Schema ref)                  -- ^ Whether additional items are allowed
   , schemaRequired             :: [Text]                                     -- ^ An object instance is valid against this keyword if every item in the array is the name of a property in the instance
   , schemaDependencies         :: HashMap Text (Choice2 [Text] (Schema ref)) -- ^ Map of dependencies (property a requires properties b and c, property a requires the instance to validate against another schema, etc.)
-  , schemaMinimum              :: Maybe (Scientific, Bool)                   -- ^ Minimum value when the instance is a number, whether or not it's exclusive
-  , schemaMaximum              :: Maybe (Scientific, Bool)                   -- ^ Maximum value when the instance is a number, whether or not it's exclusive
+  , schemaMinimum              :: Maybe Limit                                -- ^ Minimum value when the instance is a number, whether or not it's exclusive
+  , schemaMaximum              :: Maybe Limit                                -- ^ Maximum value when the instance is a number, whether or not it's exclusive
   , schemaMinItems             :: Int                                        -- ^ Minimum length for arrays
   , schemaMaxItems             :: Maybe Int                                  -- ^ Maximum length for arrays
   , schemaUniqueItems          :: Bool                                       -- ^ Whether all array items must be distinct from each other

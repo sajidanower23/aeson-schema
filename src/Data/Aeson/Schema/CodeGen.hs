@@ -266,16 +266,16 @@ generateInteger schema = return (conT ''Integer, code, [| Number . fromInteger |
 
 numberCheckers :: Name -> Schema Text -> [StmtQ]
 numberCheckers num schema = catMaybes
-  [ checkMinimum (schemaExclusiveMinimum schema) <$> schemaMinimum schema
-  , checkMaximum (schemaExclusiveMaximum schema) <$> schemaMaximum schema
+  [ checkMinimum <$> schemaMinimum schema
+  , checkMaximum <$> schemaMaximum schema
   , checkDivisibleBy <$> schemaDivisibleBy schema
   ]
   where
-    checkMinimum, checkMaximum :: Bool -> Scientific -> StmtQ
-    checkMinimum excl m = if excl
+    checkMinimum, checkMaximum :: (Scientific, Bool) -> StmtQ
+    checkMinimum (m, excl) = if excl
       then assertStmt [| $(varE num) >  m |] $ "number must be greater than " ++ show m
       else assertStmt [| $(varE num) >= m |] $ "number must be greater than or equal " ++ show m
-    checkMaximum excl m = if excl
+    checkMaximum (m, excl) = if excl
       then assertStmt [| $(varE num) <  m |] $ "number must be less than " ++ show m
       else assertStmt [| $(varE num) <= m |] $ "number must be less than or equal " ++ show m
     checkDivisibleBy devisor = assertStmt [| $(varE num) `isDivisibleBy` devisor |] $ "number must be devisible by " ++ show devisor

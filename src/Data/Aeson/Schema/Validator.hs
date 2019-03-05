@@ -114,15 +114,15 @@ validateString schema str = L.concat
 
 validateNumber :: Schema ref -> Scientific -> [ValidationError]
 validateNumber schema num = L.concat
-  [ maybeCheck (checkMinimum $ schemaExclusiveMinimum schema) $ schemaMinimum schema
-  , maybeCheck (checkMaximum $ schemaExclusiveMaximum schema) $ schemaMaximum schema
+  [ maybeCheck checkMinimum $ schemaMinimum schema
+  , maybeCheck checkMaximum $ schemaMaximum schema
   , maybeCheck checkDivisibleBy $ schemaDivisibleBy schema
   ]
   where
-    checkMinimum excl m = if excl
+    checkMinimum (m, excl) = if excl
       then assert (num > m)  $ "number must be greater than " ++ show m
       else assert (num >= m) $ "number must be greater than or equal " ++ show m
-    checkMaximum excl m = if excl
+    checkMaximum (m, excl) = if excl
       then assert (num < m)  $ "number must be less than " ++ show m
       else assert (num <= m) $ "number must be less than or equal " ++ show m
     checkDivisibleBy devisor = assert (num `isDivisibleBy` devisor) $ "number must be devisible by " ++ show devisor
