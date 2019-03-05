@@ -57,7 +57,6 @@ instance FromJSON Pattern where
 instance Lift Pattern where
   lift (Pattern src _) = [| let Right p = mkPattern src in p |]
 
--- parseJSONLimit :: Text -> Value -> Parser (Maybe Limit)
 parseJSONLimit :: FromJSON a
                => Text
                -> Object
@@ -228,7 +227,7 @@ instance FromJSON ref => FromJSON (Schema ref) where
       parseDependency :: FromJSON ref => Value -> Parser (Choice2 [Text] (Schema ref))
       parseDependency (String s) = return $ Choice1of2 [s]
       parseDependency val = parseJSON val
-  parseJSON (Bool b) = pure empty
+  parseJSON (Bool _) = pure empty -- Boolean schemas not supported yet
   parseJSON _ = fail $ "a schema must be a JSON Object or a Bool"
 
 instance (Eq ref, Lift ref) => Lift (Schema ref) where
