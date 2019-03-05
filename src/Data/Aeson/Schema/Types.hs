@@ -20,7 +20,7 @@ import           Data.Aeson                 (FromJSON (..), Value (..), (.!=),
 import           Data.Aeson.Parser          (value')
 import           Data.Aeson.Schema.Choice
 import           Data.Aeson.Types           (Parser, emptyArray, emptyObject,
-                                             parseEither)
+                                             parseEither, Object)
 import           Data.Attoparsec.ByteString.Char8 (skipSpace)
 import           Data.Attoparsec.Lazy       (Result (..), parse)
 import           Data.ByteString.Lazy.Char8 (pack)
@@ -58,6 +58,10 @@ instance Lift Pattern where
   lift (Pattern src _) = [| let Right p = mkPattern src in p |]
 
 -- parseJSONLimit :: Text -> Value -> Parser (Maybe Limit)
+parseJSONLimit :: FromJSON a
+               => Text
+               -> Object
+               -> Parser (Maybe (a, Bool))
 parseJSONLimit d o = do
   r <- o .:? ("exclusive" <> d)
   case r of
@@ -187,8 +191,8 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> (parseField "additionalItems" .!= Choice1of2 True)
     <*> parseFieldDefault "required" emptyArray
     <*> (traverse parseDependency =<< parseFieldDefault "dependencies" emptyObject)
-    <*> parseJSONLimit "minimum" o
-    <*> parseJSONLimit "maximum" o
+    <*> parseJSONLimit "Minimum" o
+    <*> parseJSONLimit "Maximum" o
     <*> parseFieldDefault "minItems" (Number 0)
     <*> parseField "maxItems"
     <*> parseFieldDefault "uniqueItems" (Bool False)
