@@ -63,7 +63,7 @@ parseJSONLimit :: Text
                -> Object
                -> Parser (Maybe Limit)
 parseJSONLimit d o = do
-  r <- o .:? ("exclusive" ++ d)
+  r <- o .:? ("exclusive" `mappend` d)
   case r of
     Nothing -> do
       r <- o .:? d
