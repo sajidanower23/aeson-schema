@@ -13,33 +13,33 @@ module Data.Aeson.Schema.Types
   , schemaQQ
   ) where
 
-import           Control.Arrow              (second)
-import           Control.Monad              (liftM)
-import           Data.Aeson                 (FromJSON (..), Value (..), (.!=),
-                                             (.:?))
-import           Data.Aeson.Parser          (value')
+import           Control.Arrow                    (second)
+import           Control.Monad                    (liftM)
+import           Data.Aeson                       (FromJSON (..), Value (..),
+                                                   (.!=), (.:?))
+import           Data.Aeson.Parser                (value')
 import           Data.Aeson.Schema.Choice
-import           Data.Aeson.Types           (Parser, emptyArray, emptyObject,
-                                             parseEither, Object)
+import           Data.Aeson.TH.Lift               ()
+import           Data.Aeson.Types                 (Object, Parser, emptyArray,
+                                                   emptyObject, parseEither)
 import           Data.Attoparsec.ByteString.Char8 (skipSpace)
-import           Data.Attoparsec.Lazy       (Result (..), parse)
-import           Data.ByteString.Lazy.Char8 (pack)
-import           Data.Foldable              (Foldable (..), toList)
-import           Data.Function              (on)
-import           Data.HashMap.Strict        (HashMap)
-import qualified Data.HashMap.Strict        as H
-import qualified Data.Map                   as M
-import           Data.Maybe                 (catMaybes)
-import           Data.Scientific            (Scientific)
-import           Data.Text                  (Text, unpack)
-import qualified Data.Vector                as V
-import           Language.Haskell.TH.Quote  (QuasiQuoter (..))
-import           Language.Haskell.TH        (varE, recUpdE)
-import           Language.Haskell.TH.Syntax (Lift (..))
-import           Prelude                    hiding (foldr, length)
-import           Text.Regex.PCRE            (makeRegexM)
-import           Text.Regex.PCRE.String     (Regex)
-import           Data.Aeson.TH.Lift         ()
+import           Data.Attoparsec.Lazy             (Result (..), parse)
+import           Data.ByteString.Lazy.Char8       (pack)
+import           Data.Foldable                    (Foldable (..), toList)
+import           Data.Function                    (on)
+import           Data.HashMap.Strict              (HashMap)
+import qualified Data.HashMap.Strict              as H
+import qualified Data.Map                         as M
+import           Data.Maybe                       (catMaybes)
+import           Data.Scientific                  (Scientific)
+import           Data.Text                        (Text, unpack)
+import qualified Data.Vector                      as V
+import           Language.Haskell.TH              (recUpdE, varE)
+import           Language.Haskell.TH.Quote        (QuasiQuoter (..))
+import           Language.Haskell.TH.Syntax       (Lift (..))
+import           Prelude                          hiding (foldr, length)
+import           Text.Regex.PCRE                  (makeRegexM)
+import           Text.Regex.PCRE.String           (Regex)
 
 -- | Compiled regex and its source
 data Pattern = Pattern { patternSource :: Text, patternCompiled :: Regex }
@@ -52,7 +52,7 @@ instance Show Pattern where
 
 instance FromJSON Pattern where
   parseJSON (String s) = mkPattern s
-  parseJSON _ = fail "only strings can be parsed as patterns"
+  parseJSON _          = fail "only strings can be parsed as patterns"
 
 instance Lift Pattern where
   lift (Pattern src _) = [| let Right p = mkPattern src in p |]
@@ -63,13 +63,13 @@ parseJSONLimit :: Text
                -> Object
                -> Parser (Maybe Limit)
 parseJSONLimit d o = do
-  r <- o .:? ("exclusive" <> d)
+  r <- o .:? ("exclusive" ++ d)
   case r of
     Nothing -> do
       r <- o .:? d
       case r of
         Nothing -> pure Nothing
-        Just n -> pure . Just $ (n, False)
+        Just n  -> pure . Just $ (n, False)
     Just n -> pure . Just $ (n, True)
 
 -- | Compile a regex to a pattern, reporting errors with fail
@@ -169,10 +169,10 @@ instance Foldable Schema where
       ffoldr g = flip $ foldr g
       foldChoice1of2 :: (a -> b -> b) -> Choice2 a x -> b -> b
       foldChoice1of2 g (Choice1of2 c) = g c
-      foldChoice1of2 _ _ = id
+      foldChoice1of2 _ _              = id
       foldChoice2of2 :: (a -> b -> b) -> Choice2 x a -> b -> b
       foldChoice2of2 g (Choice2of2 c) = g c
-      foldChoice2of2 _ _ = id
+      foldChoice2of2 _ _              = id
 
 instance FromJSON ref => FromJSON (Schema ref) where
   parseJSON (Object o) = Schema
@@ -210,14 +210,14 @@ instance FromJSON ref => FromJSON (Schema ref) where
 
       singleOrArray :: (Value -> Parser a) -> Value -> Parser [a]
       singleOrArray p (Array a) = mapM p (V.toList a)
-      singleOrArray p v = (:[]) <$> p v
+      singleOrArray p v         = (:[]) <$> p v
 
       parseSingleOrArray :: (FromJSON a) => Value -> Parser [a]
       parseSingleOrArray = singleOrArray parseJSON
 
       parseDependency :: FromJSON ref => Value -> Parser (Choice2 [Text] (Schema ref))
       parseDependency (String s) = return $ Choice1of2 [s]
-      parseDependency val = parseJSON val
+      parseDependency val        = parseJSON val
   parseJSON (Bool _) = pure empty -- Boolean schemas not supported yet
   parseJSON _ = fail $ "a schema must be a JSON Object or a Bool"
 
@@ -293,6 +293,6 @@ schemaQQ = QuasiQuoter { quoteExp = quote }
   where
     quote jsonStr = case parse (skipSpace *> value' <* skipSpace) (pack jsonStr) of
       Done _ json -> case parseEither parseJSON json :: Either String (Schema Text) of
-        Left e -> fail e
+        Left e  -> fail e
         Right s -> lift s
       _ -> fail "not a valid JSON value"

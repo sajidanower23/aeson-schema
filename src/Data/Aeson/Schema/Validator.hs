@@ -14,12 +14,12 @@ import           Data.Maybe                (isNothing)
 import           Data.Scientific           (Scientific, isInteger)
 import           Data.Text                 (Text, length, unpack)
 import qualified Data.Vector               as V
-import           Prelude                   hiding (foldr, length)
+import           Prelude                   hiding (length)
 import           Text.Regex.PCRE           (match)
 
-import           Data.Aeson.Schema.Types
 import           Data.Aeson.Schema.Choice
 import           Data.Aeson.Schema.Helpers
+import           Data.Aeson.Schema.Types
 
 -- | Errors encountered during validation
 type ValidationError = String
@@ -60,7 +60,7 @@ validate graph schema val = case schemaDRef schema of
         Number num -> validateNumber schema num
         Object obj -> validateObject graph schema obj
         Array arr  -> validateArray graph schema arr
-        _ -> valid
+        _          -> valid
       (typ, _) -> validationError $ "type mismatch: expected " ++ show typ ++ " but got " ++ getType val
     validateType (Choice2of2 s) = validate graph s val
 
@@ -75,14 +75,14 @@ validate graph schema val = case schemaDRef schema of
     checkEnum e = assert (val `elem` e) "value has to be one of the values in enum"
 
     isType :: Value -> SchemaType -> Bool
-    isType (String _) StringType = True
+    isType (String _) StringType    = True
     isType (Number num) IntegerType = isInteger num
-    isType (Number _) NumberType = True
-    isType (Bool _) BooleanType = True
-    isType (Object _) ObjectType = True
-    isType (Array _) ArrayType = True
-    isType _ AnyType = True
-    isType _ _ = False
+    isType (Number _) NumberType    = True
+    isType (Bool _) BooleanType     = True
+    isType (Object _) ObjectType    = True
+    isType (Array _) ArrayType      = True
+    isType _ AnyType                = True
+    isType _ _                      = False
 
     validateTypeDisallowed (Choice1of2 t) = if isType val t
         then validationError $ "values of type " ++ show t ++ " are not allowed here"
@@ -90,12 +90,12 @@ validate graph schema val = case schemaDRef schema of
     validateTypeDisallowed (Choice2of2 s) = assert (not . L.null $ validate graph s val) "value disallowed"
 
 assert :: Bool -> String -> [ValidationError]
-assert True _ = valid
+assert True _  = valid
 assert False e = validationError e
 
 maybeCheck :: (a -> [ValidationError]) -> Maybe a -> [ValidationError]
 maybeCheck p (Just a) = p a
-maybeCheck _ _ = valid
+maybeCheck _ _        = valid
 
 validateString :: Schema ref -> Text -> [ValidationError]
 validateString schema str = L.concat
@@ -153,7 +153,7 @@ validateObject graph schema obj =
             Nothing -> validationError $ "property " ++ unpack k ++ " depends on property " ++ show prop
             Just _ -> valid
           Choice2of2 depSchema -> validate graph depSchema (Object obj)
-          
+
     checkRequiredProperty key = case H.lookup key obj of
       Nothing -> validationError $ "required property " ++ unpack key ++ " is missing"
       Just _ -> valid

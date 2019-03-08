@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TupleSections     #-}
 
 module Data.Aeson.Schema.CodeGen
   ( Declaration (..)
@@ -17,7 +17,7 @@ import           Control.Arrow               (first, second)
 import           Control.Monad               (forM_, unless, when, zipWithM)
 import           Control.Monad.RWS.Lazy      (MonadReader (..),
                                               MonadWriter (..), evalRWST)
-import           Data.Aeson           hiding (Options)
+import           Data.Aeson                  hiding (Options)
 import           Data.Aeson.Types            (parse)
 import           Data.Char                   (isAlphaNum, isLetter, toLower,
                                               toUpper)
@@ -67,7 +67,7 @@ generateModule :: Text -- ^ Name of the generated module
                -> Graph Schema Text -- ^ Set of schemas
                -> Options
                -> Q (Text, M.Map Text Name) -- ^ Module code and mapping from schema identifiers to type names
-generateModule modName g opts = fmap (first $ renderCode . map rewrite) $ generate g opts
+generateModule modName g opts = first (renderCode . map rewrite) <$> generate g opts
   where
     renderCode :: Code -> Text
     renderCode code = T.intercalate "\n\n" $ [langExts <> ghcOpts, modDec, T.intercalate "\n" imprts] ++ map renderDeclaration code
@@ -179,7 +179,7 @@ generateSchema decName name schema = case schemaDRef schema of
     disallowType IntegerType =
       [| case $(varE val) of
            Number num | isInteger num -> fail "integers are disallowed"
-           _ -> return ()
+           _                          -> return ()
       |]
     disallowType BooleanType = disallowPattern (conP 'Bool [wildP]) "booleans are disallowed"
     disallowType ObjectType  = disallowPattern (conP 'Object [wildP]) "objects are disallowed"
@@ -297,11 +297,11 @@ cleanName str = charFirst
     cleaned = filter isAllowed str
     charFirst = case cleaned of
       (chr:_) | not (isLetter chr || chr == '_') -> '_':cleaned
-      _ -> cleaned
+      _                                          -> cleaned
 firstUpper, firstLower :: String -> String
-firstUpper "" = ""
+firstUpper ""     = ""
 firstUpper (c:cs) = toUpper c : cs
-firstLower "" = ""
+firstLower ""     = ""
 firstLower (c:cs) = toLower c : cs
 
 generateObject :: Maybe Name -- ^ Name to be used by data declaration
@@ -415,7 +415,7 @@ generateObject decName name schema = case (propertiesList, schemaAdditionalPrope
            when isAdditionalProperty $(checkAdditionalProperties [| value |] additional)
       |]
     additionalPropertiesAllowed (Choice1of2 True) = True
-    additionalPropertiesAllowed _ = False
+    additionalPropertiesAllowed _                 = False
     checkers = catMaybes
       [ if HM.null (schemaDependencies schema) then Nothing else Just (checkDependencies $ schemaDependencies schema)
       , if null (schemaPatternProperties schema) && additionalPropertiesAllowed (schemaAdditionalProperties schema)
@@ -431,7 +431,7 @@ generateArray name schema = case schemaItems schema of
     monomorphicArray itemType itemParse itemTo
   Just (Choice2of2 itemSchemas) -> do
     let names = map (\i -> name <> "Item" <> pack (show i)) ([0..] :: [Int])
-    items <- fmap (map fst) $ zipWithM (generateSchema Nothing) names itemSchemas
+    items <- (map fst) <$> zipWithM (generateSchema Nothing) names itemSchemas
     additionalItems <- case schemaAdditionalItems schema of
       Choice1of2 b -> return $ Choice1of2 b
       Choice2of2 sch -> Choice2of2 . fst <$> generateSchema Nothing (name <> "AdditionalItems") sch
