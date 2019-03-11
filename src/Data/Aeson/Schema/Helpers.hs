@@ -22,6 +22,8 @@ import           Language.Haskell.TH    (Name, Pat (..), mkName, nameBase,
 import           Text.Regex.PCRE        (makeRegexM)
 import           Text.Regex.PCRE.String (Regex)
 
+import           Network.URI
+
 -- | Tests whether all items in a vector are different from each other.
 vectorUnique :: (Eq a) => V.Vector a -> Bool
 vectorUnique v = length (nub $ V.toList v) == V.length v
@@ -52,7 +54,11 @@ formatValidators =
   , ("ipv6", Nothing)
 
   -- Resource identifiers
-  , ("uri", Nothing)
+  , ("uri"
+    , Just $ \mUri -> case parseURI (unpack mUri) of
+        Nothing -> Just $ "not a URI: " <> (unpack mUri)
+        Just _u -> Nothing
+    )
   , ("uri-reference", Nothing)
   , ("iri", Nothing)
   , ("iri-reference", Nothing)

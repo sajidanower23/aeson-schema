@@ -53,6 +53,7 @@ library
                        ghc-prim,
                        regex-compat,
                        regex-base,
+                       network-uri,
                        fail
 
 test-suite tests
