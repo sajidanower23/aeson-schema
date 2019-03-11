@@ -24,6 +24,8 @@ import           Text.Regex.PCRE.String (Regex)
 
 import           Network.URI
 
+import           Data.Time.ISO8601
+
 -- | Tests whether all items in a vector are different from each other.
 vectorUnique :: (Eq a) => V.Vector a -> Bool
 vectorUnique v = length (nub $ V.toList v) == V.length v
@@ -35,10 +37,13 @@ vectorUnique v = length (nub $ V.toList v) == V.length v
 formatValidators :: [(Text, Maybe (Text -> Maybe String))]
 formatValidators =
   [ -- Dates and Times
-    ("date-time", Nothing)
+    ("date-time"
+    , Just $ \mTime -> case parseISO8601 . unpack $ mTime of
+        Nothing -> Just $ "not a valid date-time: " <> (unpack mTime)
+        Just _t -> Nothing
+    )
   , ("date", Nothing)
   , ("time", Nothing)
-  -- , ("utc-millisec", Nothing) -- not in Draft 7
 
   -- Email addresses
   , ("email", Nothing)
