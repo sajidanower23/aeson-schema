@@ -1,5 +1,5 @@
-{-# LANGUAGE QuasiQuotes          #-}
-{-# LANGUAGE TupleSections        #-}
+{-# LANGUAGE QuasiQuotes   #-}
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Aeson.Schema.CodeGen.Tests
   ( tests
@@ -10,7 +10,8 @@ import           Test.Framework.Providers.HUnit
 import           Test.Framework.Providers.QuickCheck2
 import qualified Test.HUnit                           as HU
 import           Test.QuickCheck                      hiding (Result (..))
-import           Test.QuickCheck.Property (Result (reason), failed, succeeded)
+import           Test.QuickCheck.Property             (Result (reason), failed,
+                                                       succeeded)
 
 import           Control.Concurrent                   (forkIO)
 import           Control.Concurrent.Chan              (Chan, newChan, readChan,
@@ -21,11 +22,11 @@ import           Control.Monad                        (forever, liftM2, (>=>))
 import           Control.Monad.Trans                  (liftIO)
 import           Data.Aeson                           (Value (..))
 import           Data.Char                            (isAscii, isPrint)
-import           Data.Monoid
 import           Data.Hashable                        (Hashable)
 import qualified Data.HashMap.Lazy                    as HM
 import qualified Data.Map                             as M
 import           Data.Maybe                           (isNothing, listToMaybe)
+import           Data.Monoid
 import           Data.Scientific                      (Scientific)
 import           Data.Text                            (Text, pack, unpack)
 import qualified Data.Text                            as T
@@ -42,16 +43,17 @@ import           System.IO.Temp                       (withSystemTempFile)
 import           Data.Aeson.Schema
 import           Data.Aeson.Schema.Choice
 import           Data.Aeson.Schema.CodeGen            (generateModule)
-import           Data.Aeson.Schema.CodeGenM           (Options(..), defaultOptions)
+import           Data.Aeson.Schema.CodeGenM           (Options (..),
+                                                       defaultOptions)
 import           Data.Aeson.Schema.Helpers            (formatValidators,
                                                        getUsedModules,
                                                        replaceHiddenModules)
 
 import           Data.Aeson.Schema.Examples           (examples)
-import           TestSuite.Types                      (SchemaTest (..),
-                                                       SchemaTestCase (..))
 import qualified System.Directory                     as DIR
 import qualified System.FilePath                      as FP
+import           TestSuite.Types                      (SchemaTest (..),
+                                                       SchemaTestCase (..))
 
 instance Arbitrary Text where
   arbitrary = pack <$> arbitrary
@@ -70,7 +72,7 @@ instance Arbitrary Pattern where
   arbitrary = do
     arbitraryString <- arbitrary
     case mkPattern arbitraryString of
-      Just p -> return p
+      Just p  -> return p
       Nothing -> arbitrary
 
 arbitraryValue :: Int -> Gen Value
@@ -148,17 +150,21 @@ arbitrarySchema depth = do
     , modifyIf (Choice1of2 NumberType `elem` typ || Choice1of2 IntegerType `elem` typ) $ \sch -> do
         sMinimum <- arbitrary
         sMaximum <- case sMinimum of
-          Nothing -> arbitrary
+          Nothing   -> arbitrary
           Just mini -> fmap ((+ mini) . abs) <$> arbitrary
         exclusiveMinimum <- if isNothing sMinimum then return False else arbitrary
         exclusiveMaximum <- if isNothing sMaximum then return False else arbitrary
-        divisibleBy <- arbitrary
+        finalMin <- pure $ case sMinimum of
+          Nothing -> Nothing
+          Just n  -> Just (n, exclusiveMinimum)
+        finalMax <- pure $ case sMaximum of
+          Nothing -> Nothing
+          Just n  -> Just (n, exclusiveMaximum)
+        multipleOf <- arbitrary
         return $ sch
-          { schemaMinimum = sMinimum
-          , schemaMaximum = sMaximum
-          , schemaExclusiveMinimum = exclusiveMinimum
-          , schemaExclusiveMaximum = exclusiveMaximum
-          , schemaDivisibleBy = divisibleBy
+          { schemaMinimum = finalMin
+          , schemaMaximum = finalMax
+          , schemaMultipleOf = multipleOf
           }
 
     ]
@@ -207,7 +213,7 @@ getInterpreterArgs = do
     mdb <- getSandboxPackageDB
     return $ case mdb of
                 Just path -> ["-no-user-package-db", "-package-db " <> path]
-                Nothing -> []
+                Nothing   -> []
 
 -- | uses the Forklift pattern (http://apfelmus.nfshost.com/blog/2012/06/07-forklift.html)
 -- to send commands to an interpreter running in a different thread
@@ -287,7 +293,7 @@ withCodeTempFile code action = case maybeName of
     maybeName = findName (T.lines code)
     findName (l:ls) = case T.words l of
       ("module":n:_) -> Just n
-      _ -> findName ls
+      _              -> findName ls
     findName _ = Nothing
 
 eitherToResult :: Show err => Either err a -> Result

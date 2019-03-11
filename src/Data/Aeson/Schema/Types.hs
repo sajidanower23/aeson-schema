@@ -13,33 +13,33 @@ module Data.Aeson.Schema.Types
   , schemaQQ
   ) where
 
-import           Control.Arrow              (second)
-import           Control.Monad              (liftM)
-import           Data.Aeson                 (FromJSON (..), Value (..), (.!=),
-                                             (.:?))
-import           Data.Aeson.Parser          (value')
+import           Control.Arrow                    (second)
+import           Control.Monad                    (liftM)
+import           Data.Aeson                       (FromJSON (..), Value (..),
+                                                   (.!=), (.:?))
+import           Data.Aeson.Parser                (value')
 import           Data.Aeson.Schema.Choice
-import           Data.Aeson.Types           (Parser, emptyArray, emptyObject,
-                                             parseEither)
+import           Data.Aeson.TH.Lift               ()
+import           Data.Aeson.Types                 (Object, Parser, emptyArray,
+                                                   emptyObject, parseEither)
 import           Data.Attoparsec.ByteString.Char8 (skipSpace)
-import           Data.Attoparsec.Lazy       (Result (..), parse)
-import           Data.ByteString.Lazy.Char8 (pack)
-import           Data.Foldable              (Foldable (..), toList)
-import           Data.Function              (on)
-import           Data.HashMap.Strict        (HashMap)
-import qualified Data.HashMap.Strict        as H
-import qualified Data.Map                   as M
-import           Data.Maybe                 (catMaybes)
-import           Data.Scientific            (Scientific)
-import           Data.Text                  (Text, unpack)
-import qualified Data.Vector                as V
-import           Language.Haskell.TH.Quote  (QuasiQuoter (..))
-import           Language.Haskell.TH        (varE, recUpdE)
-import           Language.Haskell.TH.Syntax (Lift (..))
-import           Prelude                    hiding (foldr, length)
-import           Text.Regex.PCRE            (makeRegexM)
-import           Text.Regex.PCRE.String     (Regex)
-import           Data.Aeson.TH.Lift         ()
+import           Data.Attoparsec.Lazy             (Result (..), parse)
+import           Data.ByteString.Lazy.Char8       (pack)
+import           Data.Foldable                    (Foldable (..), toList)
+import           Data.Function                    (on)
+import           Data.HashMap.Strict              (HashMap)
+import qualified Data.HashMap.Strict              as H
+import qualified Data.Map                         as M
+import           Data.Maybe                       (catMaybes)
+import           Data.Scientific                  (Scientific)
+import           Data.Text                        (Text, unpack)
+import qualified Data.Vector                      as V
+import           Language.Haskell.TH              (recUpdE, varE)
+import           Language.Haskell.TH.Quote        (QuasiQuoter (..))
+import           Language.Haskell.TH.Syntax       (Lift (..))
+import           Prelude                          hiding (foldr, length)
+import           Text.Regex.PCRE                  (makeRegexM)
+import           Text.Regex.PCRE.String           (Regex)
 
 -- | Compiled regex and its source
 data Pattern = Pattern { patternSource :: Text, patternCompiled :: Regex }
@@ -52,10 +52,25 @@ instance Show Pattern where
 
 instance FromJSON Pattern where
   parseJSON (String s) = mkPattern s
-  parseJSON _ = fail "only strings can be parsed as patterns"
+  parseJSON _          = fail "only strings can be parsed as patterns"
 
 instance Lift Pattern where
   lift (Pattern src _) = [| let Right p = mkPattern src in p |]
+
+type Limit = (Scientific, Bool)
+
+parseJSONLimit :: Text
+               -> Object
+               -> Parser (Maybe Limit)
+parseJSONLimit d o = do
+  r <- o .:? ("exclusive" `mappend` d)
+  case r of
+    Nothing -> do
+      r <- o .:? d
+      case r of
+        Nothing -> pure Nothing
+        Just n  -> pure . Just $ (n, False)
+    Just n -> pure . Just $ (n, True)
 
 -- | Compile a regex to a pattern, reporting errors with fail
 mkPattern :: (Monad m) => Text -> m Pattern
@@ -95,7 +110,7 @@ instance Lift SchemaType where
   lift NullType    = [| NullType |]
   lift AnyType     = [| AnyType |]
 
--- | JSON Schema (Draft 3) Core Schema Definition
+-- | JSON Schema (Draft 7) Core Schema Definition
 data Schema ref = Schema
   { schemaType                 :: [Choice2 SchemaType (Schema ref)]          -- ^ List of allowed schema types
   , schemaProperties           :: HashMap Text (Schema ref)                  -- ^ Subschemas for properties
@@ -103,12 +118,10 @@ data Schema ref = Schema
   , schemaAdditionalProperties :: Choice2 Bool (Schema ref)                  -- ^ Whether additional properties are allowed when the instance is an object, and if so, a schema that they have to validate against
   , schemaItems                :: Maybe (Choice2 (Schema ref) [Schema ref])  -- ^ Either a schema for all array items or a different schema for each position in the array
   , schemaAdditionalItems      :: Choice2 Bool (Schema ref)                  -- ^ Whether additional items are allowed
-  , schemaRequired             :: Bool                                       -- ^ When this schema is used in a property of another schema, this means that the property must have a value and not be undefined
+  , schemaRequired             :: [Text]                                     -- ^ An object instance is valid against this keyword if every item in the array is the name of a property in the instance
   , schemaDependencies         :: HashMap Text (Choice2 [Text] (Schema ref)) -- ^ Map of dependencies (property a requires properties b and c, property a requires the instance to validate against another schema, etc.)
-  , schemaMinimum              :: Maybe Scientific                           -- ^ Minimum value when the instance is a number
-  , schemaMaximum              :: Maybe Scientific                           -- ^ Maximum value when the instance is a number
-  , schemaExclusiveMinimum     :: Bool                                       -- ^ Whether the minimum value is exclusive (only numbers greater than the minimum are allowed)
-  , schemaExclusiveMaximum     :: Bool                                       -- ^ Whether the maximum value is exclusive (only numbers less than the maximum are allowed)
+  , schemaMinimum              :: Maybe Limit                                -- ^ Minimum value when the instance is a number, whether or not it's exclusive
+  , schemaMaximum              :: Maybe Limit                                -- ^ Maximum value when the instance is a number, whether or not it's exclusive
   , schemaMinItems             :: Int                                        -- ^ Minimum length for arrays
   , schemaMaxItems             :: Maybe Int                                  -- ^ Maximum length for arrays
   , schemaUniqueItems          :: Bool                                       -- ^ Whether all array items must be distinct from each other
@@ -121,7 +134,7 @@ data Schema ref = Schema
   , schemaTitle                :: Maybe Text                                 -- ^ Short description of the instance property
   , schemaDescription          :: Maybe Text                                 -- ^ Full description of the purpose of the instance property
   , schemaFormat               :: Maybe Text                                 -- ^ Format of strings, e.g. 'data-time', 'regex' or 'email'
-  , schemaDivisibleBy          :: Maybe Scientific                           -- ^ When the instance is a number, it must be divisible by this number with no remainder
+  , schemaMultipleOf           :: Maybe Scientific                           -- ^ When the instance is a number, it must be multiple of this number
   , schemaDisallow             :: [Choice2 SchemaType (Schema ref)]          -- ^ List of disallowed types
   , schemaExtends              :: [Schema ref]                               -- ^ Base schema that the current schema inherits from
   , schemaId                   :: Maybe Text                                 -- ^ Identifier of the current schema
@@ -163,10 +176,10 @@ instance Foldable Schema where
       ffoldr g = flip $ foldr g
       foldChoice1of2 :: (a -> b -> b) -> Choice2 a x -> b -> b
       foldChoice1of2 g (Choice1of2 c) = g c
-      foldChoice1of2 _ _ = id
+      foldChoice1of2 _ _              = id
       foldChoice2of2 :: (a -> b -> b) -> Choice2 x a -> b -> b
       foldChoice2of2 g (Choice2of2 c) = g c
-      foldChoice2of2 _ _ = id
+      foldChoice2of2 _ _              = id
 
 instance FromJSON ref => FromJSON (Schema ref) where
   parseJSON (Object o) = Schema
@@ -176,12 +189,10 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> (parseField "additionalProperties" .!= Choice1of2 True)
     <*> parseField "items"
     <*> (parseField "additionalItems" .!= Choice1of2 True)
-    <*> parseFieldDefault "required" (Bool False)
+    <*> parseFieldDefault "required" emptyArray
     <*> (traverse parseDependency =<< parseFieldDefault "dependencies" emptyObject)
-    <*> parseField "minimum"
-    <*> parseField "maximum"
-    <*> parseFieldDefault "exclusiveMinimum" (Bool False)
-    <*> parseFieldDefault "exclusiveMaximum" (Bool False)
+    <*> parseJSONLimit "Minimum" o
+    <*> parseJSONLimit "Maximum" o
     <*> parseFieldDefault "minItems" (Number 0)
     <*> parseField "maxItems"
     <*> parseFieldDefault "uniqueItems" (Bool False)
@@ -194,7 +205,7 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> parseField "title"
     <*> parseField "description"
     <*> parseField "format"
-    <*> parseField "divisibleBy"
+    <*> parseField "multipleOf"
     <*> (parseSingleOrArray =<< parseFieldDefault "disallow" emptyArray)
     <*> ((maybe (return Nothing) (fmap Just . parseSingleOrArray) =<< parseField "extends") .!= [])
     <*> parseField "id"
@@ -209,15 +220,16 @@ instance FromJSON ref => FromJSON (Schema ref) where
 
       singleOrArray :: (Value -> Parser a) -> Value -> Parser [a]
       singleOrArray p (Array a) = mapM p (V.toList a)
-      singleOrArray p v = (:[]) <$> p v
+      singleOrArray p v         = (:[]) <$> p v
 
       parseSingleOrArray :: (FromJSON a) => Value -> Parser [a]
       parseSingleOrArray = singleOrArray parseJSON
 
       parseDependency :: FromJSON ref => Value -> Parser (Choice2 [Text] (Schema ref))
       parseDependency (String s) = return $ Choice1of2 [s]
-      parseDependency val = parseJSON val
-  parseJSON _ = fail "a schema must be a JSON object"
+      parseDependency val        = parseJSON val
+  parseJSON (Bool _) = pure empty -- Boolean schemas not supported yet
+  parseJSON _ = fail $ "a schema must be a JSON Object or a Bool"
 
 instance (Eq ref, Lift ref) => Lift (Schema ref) where
   lift schema = case updates of
@@ -235,8 +247,6 @@ instance (Eq ref, Lift ref) => Lift (Schema ref) where
         , field 'schemaDependencies schemaDependencies
         , field 'schemaMinimum schemaMinimum
         , field 'schemaMaximum schemaMaximum
-        , field 'schemaExclusiveMinimum schemaExclusiveMinimum
-        , field 'schemaExclusiveMaximum schemaExclusiveMaximum
         , field 'schemaMinItems schemaMinItems
         , field 'schemaMaxItems schemaMaxItems
         , field 'schemaUniqueItems schemaUniqueItems
@@ -249,7 +259,7 @@ instance (Eq ref, Lift ref) => Lift (Schema ref) where
         , field 'schemaTitle schemaTitle
         , field 'schemaDescription schemaDescription
         , field 'schemaFormat schemaFormat
-        , field 'schemaDivisibleBy schemaDivisibleBy
+        , field 'schemaMultipleOf schemaMultipleOf
         , field 'schemaDisallow schemaDisallow
         , field 'schemaExtends schemaExtends
         , field 'schemaId schemaId
@@ -269,12 +279,10 @@ empty = Schema
   , schemaAdditionalProperties = Choice1of2 True
   , schemaItems = Nothing
   , schemaAdditionalItems = Choice1of2 True
-  , schemaRequired = False
+  , schemaRequired = []
   , schemaDependencies = H.empty
   , schemaMinimum = Nothing
   , schemaMaximum = Nothing
-  , schemaExclusiveMinimum = False
-  , schemaExclusiveMaximum = False
   , schemaMinItems = 0
   , schemaMaxItems = Nothing
   , schemaUniqueItems = False
@@ -287,7 +295,7 @@ empty = Schema
   , schemaTitle = Nothing
   , schemaDescription = Nothing
   , schemaFormat = Nothing
-  , schemaDivisibleBy = Nothing
+  , schemaMultipleOf = Nothing
   , schemaDisallow = []
   , schemaExtends = []
   , schemaId = Nothing
@@ -301,6 +309,6 @@ schemaQQ = QuasiQuoter { quoteExp = quote }
   where
     quote jsonStr = case parse (skipSpace *> value' <* skipSpace) (pack jsonStr) of
       Done _ json -> case parseEither parseJSON json :: Either String (Schema Text) of
-        Left e -> fail e
+        Left e  -> fail e
         Right s -> lift s
       _ -> fail "not a valid JSON value"

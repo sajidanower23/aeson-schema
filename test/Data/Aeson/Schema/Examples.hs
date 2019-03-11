@@ -22,8 +22,7 @@ examples testCase assertValid' assertInvalid' =
         "properties": {
           "positiveNumber": {
             "type": "number",
-            "minimum": 0,
-            "exclusiveMinimum": true
+            "exclusiveMinimum": 0
           }
         },
         "patternProperties": {
@@ -141,8 +140,9 @@ examples testCase assertValid' assertInvalid' =
           "a": {
             "disallow": [{
               "properties": {
-                "b": { "type": "any", "required": true }
-              }
+                "b": { "type": "any" }
+              },
+              "required": [ "b" ]
             }]
           }
         }
@@ -150,31 +150,6 @@ examples testCase assertValid' assertInvalid' =
       assertValid aDisallowsB [aesonLitQQ| { "a": "lorem" } |]
       assertValid aDisallowsB [aesonLitQQ| { "b": 42 } |]
       assertInvalid aDisallowsB [aesonLitQQ| { "a": "lorem", "b": 42 } |]
-  , testCase "extends" $ do
-      let schema = [schemaQQ| {
-        "type": "object",
-        "properties": {
-          "a": { "type": "number" }
-        },
-        "extends": [
-          {
-            "properties": {
-              "a": { "required": true }
-            }
-          },
-          {
-            "patternProperties": {
-              "^[a-z]$": { "minimum": -3 }
-            }
-          }
-        ]
-      } |]
-      assertValid schema [aesonLitQQ| { "a": 2 } |]
-      assertInvalid schema [aesonLitQQ| {} |]
-      assertInvalid schema [aesonLitQQ| { "a": -4 } |]
-      assertInvalid schema [aesonLitQQ| { "a": "foo" } |]
-      assertInvalid schema [aesonLitQQ| { "a": -1, "b": -10 } |]
-      assertValid schema [aesonLitQQ| { "a": -1, "ba": -10 } |]
   , testCase "$ref" $ do
       let
         a = [schemaQQ| { "$ref": "b", "minimum": 3 } |]
