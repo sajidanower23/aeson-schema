@@ -25,7 +25,8 @@ assertValid graph schema value = case validate graph schema value of
   [] -> return ()
   es -> HU.assertFailure $ unlines es
 assertInvalid graph schema value = case validate graph schema value of
-  [] -> HU.assertFailure "expected a validation error"
+  -- [] -> HU.assertFailure "expected a validation error"
+  [] -> HU.assertFailure ""
   _  -> return ()
 
 tests :: [SchemaTest] -> [Test]
