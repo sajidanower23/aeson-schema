@@ -24,12 +24,11 @@ aeson-schema utilizes the cabal sandbox.  To get up and running with the tests y
 ## Compatibility
 
 `aeson-schema` implements [Draft 7](https://json-schema.org/understanding-json-schema/index.html) of the spec.
-It supports all core schema definitions *except* the following 'format' values:
+It supports all core schema definitions **_except_** the following
+[format values](https://json-schema.org/understanding-json-schema/reference/string.html#format):
 
-* date-time
 * date
 * time
-* uri
 * uri-reference
 * iri
 * iri-reference
