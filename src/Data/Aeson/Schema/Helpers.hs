@@ -13,7 +13,8 @@ import           Data.Generics          (Data, everything, everywhere, mkQ, mkT)
 import           Data.List              (nub)
 import qualified Data.Map               as M
 import           Data.Maybe             (maybeToList)
-import           Data.Scientific        (Scientific, coefficient, base10Exponent)
+import           Data.Scientific        (Scientific, base10Exponent,
+                                         coefficient)
 import           Data.Text              (Text, unpack)
 import qualified Data.Vector            as V
 import           Language.Haskell.TH    (Name, Pat (..), mkName, nameBase,
@@ -28,25 +29,55 @@ vectorUnique v = length (nub $ V.toList v) == V.length v
 -- | List of format validators. Some validators haven't been implemented yet.
 -- Those which are implemented take a Text value and return an error in case the
 -- input is invalid.
+-- https://json-schema.org/understanding-json-schema/reference/string.html#format
 formatValidators :: [(Text, Maybe (Text -> Maybe String))]
 formatValidators =
-  [ ("date-time", Nothing)
-  , ("data", Nothing)
+  [ -- Dates and Times
+    ("date-time", Nothing)
+  , ("date", Nothing)
   , ("time", Nothing)
-  , ("utc-millisec", Nothing)
+  -- , ("utc-millisec", Nothing) -- not in Draft 7
+
+  -- Email addresses
+  , ("email", Nothing)
+  , ("idn-email", Nothing)
+
+  -- Hostnames
+  , ("hostname", Nothing)
+  , ("idn-hostname", Nothing)
+
+  -- IP Addresses
+  -- , ("ip-address", Nothing)
+  , ("ipv4", Nothing)
+  , ("ipv6", Nothing)
+
+  -- Resource identifiers
+  , ("uri", Nothing)
+  , ("uri-reference", Nothing)
+  , ("iri", Nothing)
+  , ("iri-reference", Nothing)
+
+  -- URI template
+  , ("uri-template", Nothing)
+
+  -- JSON Pointer
+  , ("json-pointer", Nothing)
+  , ("relative-json-pointer", Nothing)
+
+  -- Regular Expressions
+  -- https://json-schema.org/understanding-json-schema/reference/regular_expressions.html#regular-expressions
+  -- Should be valid according to https://www.ecma-international.org/publications/files/ECMA-ST/Ecma-262.pdf
   , ( "regex"
     , Just $ \str -> case makeRegexM (unpack str) :: Maybe Regex of
         Nothing -> Just $ "not a regex: " ++ show str
-        Just _ -> Nothing
+        Just _  -> Nothing
     )
+
+  -- Deprecated (?)
   , ("color", Nothing) -- not going to implement this
   , ("style", Nothing) -- not going to implement this
   , ("phone", Nothing)
-  , ("uri", Nothing)
-  , ("email", Nothing)
-  , ("ip-address", Nothing)
-  , ("ipv6", Nothing)
-  , ("host-name", Nothing)
+
   ]
 
 -- | Validates a Text value against a format.
@@ -88,7 +119,7 @@ replaceHiddenModules d replaceMap = everywhere (mkT replaceModule) d
         mkName $ "Data.Attoparsec.Number." ++ nameBase n
       Just "GHC.Tuple" -> mkName $ nameBase n
       Just m -> case M.lookup m replaceMap of
-        Just r -> mkName $ r ++ ('.' : nameBase n)
+        Just r  -> mkName $ r ++ ('.' : nameBase n)
         Nothing -> n
       _ -> n
 
@@ -98,7 +129,7 @@ cleanPatterns :: Data a => a -> a
 cleanPatterns = everywhere $ mkT replacePattern
   where
     replacePattern (ConP n []) | nameBase n == "[]" = ListP []
-    replacePattern p = p
+    replacePattern p           = p
 
 -- | Extracts a list of used modules from a TH code tree.
 getUsedModules :: Data a => a -> [String]
