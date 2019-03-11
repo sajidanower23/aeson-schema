@@ -125,7 +125,7 @@ validateNumber schema num = L.concat
     checkMaximum (m, excl) = if excl
       then assert (num < m)  $ "number must be less than " ++ show m
       else assert (num <= m) $ "number must be less than or equal " ++ show m
-    checkMultipleOf divisor = assert (num `isMultipleOf` devisor) $ "number must be a multiple of " ++ show devisor
+    checkMultipleOf divisor = assert (num `isMultipleOf` divisor) $ "number must be a multiple of " ++ show divisor
 
 validateInteger :: Schema ref -> Scientific -> [ValidationError]
 validateInteger schema num =
