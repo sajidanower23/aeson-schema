@@ -268,7 +268,7 @@ numberCheckers :: Name -> Schema Text -> [StmtQ]
 numberCheckers num schema = catMaybes
   [ checkMinimum <$> schemaMinimum schema
   , checkMaximum <$> schemaMaximum schema
-  , checkDivisibleBy <$> schemaDivisibleBy schema
+  , checkMultipleOf <$> schemaMultipleOf schema
   ]
   where
     checkMinimum, checkMaximum :: (Scientific, Bool) -> StmtQ
@@ -278,7 +278,7 @@ numberCheckers num schema = catMaybes
     checkMaximum (m, excl) = if excl
       then assertStmt [| $(varE num) <  m |] $ "number must be less than " ++ show m
       else assertStmt [| $(varE num) <= m |] $ "number must be less than or equal " ++ show m
-    checkDivisibleBy devisor = assertStmt [| $(varE num) `isDivisibleBy` devisor |] $ "number must be devisible by " ++ show devisor
+    checkMultipleOf devisor = assertStmt [| $(varE num) `isMultipleOf` devisor |] $ "number must be devisible by " ++ show devisor
 
 generateBoolean :: CodeGenM SchemaTypes (TypeQ, ExpQ, ExpQ)
 generateBoolean = return ([t| Bool |], [| parseJSON |], [| Bool |])

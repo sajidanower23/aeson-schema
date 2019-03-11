@@ -2,7 +2,7 @@ module Data.Aeson.Schema.Helpers
   ( vectorUnique
   , formatValidators
   , validateFormat
-  , isDivisibleBy
+  , isMultipleOf
   , replaceHiddenModules
   , cleanPatterns
   , getUsedModules
@@ -92,9 +92,9 @@ validateFormat :: Text -- ^ format
                -> Maybe String -- ^ message in case of an error
 validateFormat format str = ($ str) =<< join (lookup format formatValidators)
 
--- | Tests whether the first number is divisible by the second with no remainder.
-isDivisibleBy :: Scientific -> Scientific -> Bool
-isDivisibleBy a b =
+-- | Tests whether the first number is multiple of the second.
+isMultipleOf :: Scientific -> Scientific -> Bool
+isMultipleOf a b =
   let ca = coefficient a
       ea = base10Exponent a
       cb = coefficient b

@@ -134,7 +134,7 @@ data Schema ref = Schema
   , schemaTitle                :: Maybe Text                                 -- ^ Short description of the instance property
   , schemaDescription          :: Maybe Text                                 -- ^ Full description of the purpose of the instance property
   , schemaFormat               :: Maybe Text                                 -- ^ Format of strings, e.g. 'data-time', 'regex' or 'email'
-  , schemaDivisibleBy          :: Maybe Scientific                           -- ^ When the instance is a number, it must be divisible by this number with no remainder
+  , schemaMultipleOf           :: Maybe Scientific                           -- ^ When the instance is a number, it must be multiple of this number
   , schemaDisallow             :: [Choice2 SchemaType (Schema ref)]          -- ^ List of disallowed types
   , schemaExtends              :: [Schema ref]                               -- ^ Base schema that the current schema inherits from
   , schemaId                   :: Maybe Text                                 -- ^ Identifier of the current schema
@@ -205,7 +205,7 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> parseField "title"
     <*> parseField "description"
     <*> parseField "format"
-    <*> parseField "divisibleBy"
+    <*> parseField "multipleOf"
     <*> (parseSingleOrArray =<< parseFieldDefault "disallow" emptyArray)
     <*> ((maybe (return Nothing) (fmap Just . parseSingleOrArray) =<< parseField "extends") .!= [])
     <*> parseField "id"
@@ -259,7 +259,7 @@ instance (Eq ref, Lift ref) => Lift (Schema ref) where
         , field 'schemaTitle schemaTitle
         , field 'schemaDescription schemaDescription
         , field 'schemaFormat schemaFormat
-        , field 'schemaDivisibleBy schemaDivisibleBy
+        , field 'schemaMultipleOf schemaMultipleOf
         , field 'schemaDisallow schemaDisallow
         , field 'schemaExtends schemaExtends
         , field 'schemaId schemaId
@@ -295,7 +295,7 @@ empty = Schema
   , schemaTitle = Nothing
   , schemaDescription = Nothing
   , schemaFormat = Nothing
-  , schemaDivisibleBy = Nothing
+  , schemaMultipleOf = Nothing
   , schemaDisallow = []
   , schemaExtends = []
   , schemaId = Nothing

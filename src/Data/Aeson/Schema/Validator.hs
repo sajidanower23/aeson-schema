@@ -116,7 +116,7 @@ validateNumber :: Schema ref -> Scientific -> [ValidationError]
 validateNumber schema num = L.concat
   [ maybeCheck checkMinimum $ schemaMinimum schema
   , maybeCheck checkMaximum $ schemaMaximum schema
-  , maybeCheck checkDivisibleBy $ schemaDivisibleBy schema
+  , maybeCheck checkMultipleOf $ schemaMultipleOf schema
   ]
   where
     checkMinimum (m, excl) = if excl
@@ -125,7 +125,7 @@ validateNumber schema num = L.concat
     checkMaximum (m, excl) = if excl
       then assert (num < m)  $ "number must be less than " ++ show m
       else assert (num <= m) $ "number must be less than or equal " ++ show m
-    checkDivisibleBy devisor = assert (num `isDivisibleBy` devisor) $ "number must be devisible by " ++ show devisor
+    checkMultipleOf divisor = assert (num `isMultipleOf` devisor) $ "number must be a multiple of " ++ show devisor
 
 validateInteger :: Schema ref -> Scientific -> [ValidationError]
 validateInteger schema num =
