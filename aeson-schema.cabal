@@ -55,7 +55,8 @@ library
                        regex-compat,
                        regex-base,
                        network-uri,
-                       fail
+                       fail,
+                       iso8601-time
 
 test-suite tests
   ghc-options:         -Wall
