@@ -45,6 +45,8 @@ validate graph schema val = case schemaDRef schema of
         [t] -> validateType t
         ts  -> if L.any L.null (map validateType ts) then [] else validationError "no type matched"
     , maybeCheck checkEnum $ schemaEnum schema
+    , concatMap validateTypeDisallowed (schemaDisallow schema)
+    , concatMap (flip (validate graph) val) (schemaExtends schema)
     ]
   where
     validateType (Choice1of2 t) = case (t, val) of
@@ -114,6 +116,7 @@ validateNumber :: Schema ref -> Scientific -> [ValidationError]
 validateNumber schema num = L.concat
   [ maybeCheck checkMinimum $ schemaMinimum schema
   , maybeCheck checkMaximum $ schemaMaximum schema
+  , maybeCheck checkDivisibleBy $ schemaDivisibleBy schema
   ]
   where
     checkMinimum (m, excl) = if excl

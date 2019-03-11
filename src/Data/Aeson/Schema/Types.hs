@@ -134,6 +134,9 @@ data Schema ref = Schema
   , schemaTitle                :: Maybe Text                                 -- ^ Short description of the instance property
   , schemaDescription          :: Maybe Text                                 -- ^ Full description of the purpose of the instance property
   , schemaFormat               :: Maybe Text                                 -- ^ Format of strings, e.g. 'data-time', 'regex' or 'email'
+  , schemaDivisibleBy          :: Maybe Scientific                           -- ^ When the instance is a number, it must be divisible by this number with no remainder
+  , schemaDisallow             :: [Choice2 SchemaType (Schema ref)]          -- ^ List of disallowed types
+  , schemaExtends              :: [Schema ref]                               -- ^ Base schema that the current schema inherits from
   , schemaId                   :: Maybe Text                                 -- ^ Identifier of the current schema
   , schemaDRef                 :: Maybe ref                                  -- ^ $ref: reference to another schema
   , schemaDSchema              :: Maybe Text                                 -- ^ $schema: URI of a schema that defines the format of the current schema
@@ -151,6 +154,8 @@ instance Functor Schema where
     , schemaItems = mapChoice2 (fmap f) (fmap $ fmap f) <$> schemaItems s
     , schemaAdditionalItems = mapChoice2 id (fmap f) (schemaAdditionalItems s)
     , schemaDependencies = mapChoice2 id (fmap f) <$> schemaDependencies s
+    , schemaDisallow = mapChoice2 id (fmap f) <$> schemaDisallow s
+    , schemaExtends = fmap f <$> schemaExtends s
     , schemaDRef = f <$> schemaDRef s
     }
 
@@ -162,6 +167,8 @@ instance Foldable Schema where
                   . ffoldr (\items -> foldChoice1of2 (ffoldr f) items . foldChoice2of2 (ffoldr $ ffoldr f) items) (schemaItems s)
                   . foldChoice2of2 (ffoldr f) (schemaAdditionalItems s)
                   . ffoldr (ffoldr f) (choice2of2s $ toList $ schemaDependencies s)
+                  . ffoldr (ffoldr f) (choice2of2s $ schemaDisallow s)
+                  . ffoldr (ffoldr f) (schemaExtends s)
                   . ffoldr f (schemaDRef s)
                   $ start
     where
@@ -198,6 +205,9 @@ instance FromJSON ref => FromJSON (Schema ref) where
     <*> parseField "title"
     <*> parseField "description"
     <*> parseField "format"
+    <*> parseField "divisibleBy"
+    <*> (parseSingleOrArray =<< parseFieldDefault "disallow" emptyArray)
+    <*> ((maybe (return Nothing) (fmap Just . parseSingleOrArray) =<< parseField "extends") .!= [])
     <*> parseField "id"
     <*> parseField "$ref"
     <*> parseField "$schema"
@@ -249,6 +259,9 @@ instance (Eq ref, Lift ref) => Lift (Schema ref) where
         , field 'schemaTitle schemaTitle
         , field 'schemaDescription schemaDescription
         , field 'schemaFormat schemaFormat
+        , field 'schemaDivisibleBy schemaDivisibleBy
+        , field 'schemaDisallow schemaDisallow
+        , field 'schemaExtends schemaExtends
         , field 'schemaId schemaId
         , fmap ('schemaDRef,) . lift . Just <$> schemaDRef schema
         , field 'schemaDSchema schemaDSchema
@@ -282,6 +295,9 @@ empty = Schema
   , schemaTitle = Nothing
   , schemaDescription = Nothing
   , schemaFormat = Nothing
+  , schemaDivisibleBy = Nothing
+  , schemaDisallow = []
+  , schemaExtends = []
   , schemaId = Nothing
   , schemaDRef = Nothing
   , schemaDSchema = Nothing
