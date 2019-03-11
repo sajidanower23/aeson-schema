@@ -1,16 +1,19 @@
-import           Test.Framework
 import qualified Data.Text                         as T
+import           Test.Framework
 
 import qualified Data.Aeson.Schema.CodeGen.Tests
 import qualified Data.Aeson.Schema.Types.Tests
 import qualified Data.Aeson.Schema.Validator.Tests
-import           TestSuite.Types                   (SchemaTest(..), readSchemaTests)
+import           TestSuite.Types                   (SchemaTest (..),
+                                                    readSchemaTests)
 
 allTests :: IO [SchemaTest]
 allTests = do
   requiredTests <- readSchemaTests "test/test-suite/tests/draft7"
   optionalTests <- readSchemaTests "test/test-suite/tests/draft7/optional"
-  return $ requiredTests ++ optionalTests
+  formatTests <- readSchemaTests "test/test-suite/tests/draft7/optional/format"
+
+  return $ requiredTests ++ optionalTests ++ formatTests
 
 
 main :: IO ()
