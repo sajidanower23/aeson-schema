@@ -23,20 +23,25 @@ aeson-schema utilizes the cabal sandbox.  To get up and running with the tests y
 
 ## Compatibility
 
-aeson-schema implements [Draft 3](http://tools.ietf.org/html/draft-zyp-json-schema-03) of the spec. It supports all core schema definitions except the following 'format' values:
+`aeson-schema` implements [Draft 7](https://json-schema.org/understanding-json-schema/index.html) of the spec.
+It supports all core schema definitions *except* the following 'format' values:
 
-* data-time
+* date-time
 * date
 * time
-* utc-millisec
-* color
-* style
-* phone
 * uri
+* uri-reference
+* iri
+* iri-reference
+* uri-template
+* json-pointer
+* relative-json-pointer
 * email
-* ip-address
+* idn-email
+* ipv4
 * ipv6
-* host-name
+* hostname
+* idn-hostname
 
 I would be happy to accept pull requests that implement validation of one of these formats, fix bugs or add other features.
 
