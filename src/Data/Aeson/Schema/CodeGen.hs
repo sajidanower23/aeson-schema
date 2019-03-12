@@ -144,7 +144,7 @@ generateSchema decName name schema = case schemaDRef schema of
     unionType -> do
       let l = pack . show $ length unionType
       let names = map (\i -> name <> "Choice" <> pack (show i) <> "of" <> l) ([1..] :: [Int])
-      subs <- fmap (map fst) $ zipWithM (choice2 (flip $ generateSimpleType Nothing) (flip $ generateSchema Nothing)) unionType names
+      subs <- (map fst) <$> zipWithM (choice2 (flip $ generateSimpleType Nothing) (flip $ generateSchema Nothing)) unionType names
       (,True) <$> generateUnionType subs
   where
     generateSimpleType :: Maybe Name -> Text -> SchemaType -> CodeGenM SchemaTypes ((TypeQ, ExpQ, ExpQ), Bool)
