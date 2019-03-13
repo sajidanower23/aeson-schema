@@ -404,14 +404,11 @@ generateObject decName name schema = case (propertiesList, schemaAdditionalPrope
     checkAdditionalProperties _ (Choice1of2 True) = [| return () |]
     checkAdditionalProperties _ (Choice1of2 False) = [| fail "additional properties are not allowed" |]
     checkAdditionalProperties value (Choice2of2 sch) = doE [assertValidates (lift sch) value]
-    -- TODO Once https://ghc.haskell.org/trac/ghc/ticket/10734 is
-    -- fixed, use a ‘let’ again for matchingPatterns and
-    -- isAdditionalProperty
     checkPatternAndAdditionalProperties patterns additional = noBindS
       [| let items = HM.toList $(varE obj) in forM_ items $ \(pname, value) -> do
-           matchingPatterns <- return (filter (flip PCRE.match (unpack pname) . patternCompiled . fst) $(lift patterns))
+           let matchingPatterns = (filter (flip PCRE.match (unpack pname) . patternCompiled . fst) $(lift patterns))
            forM_ matchingPatterns $ \(_, sch) -> $(doE [assertValidates [| sch |] [| value |]])
-           isAdditionalProperty <- return (null matchingPatterns && pname `notElem` $(lift $ map fst $ HM.toList $ schemaProperties schema))
+           let isAdditionalProperty = (null matchingPatterns && pname `notElem` $(lift $ map fst $ HM.toList $ schemaProperties schema))
            when isAdditionalProperty $(checkAdditionalProperties [| value |] additional)
       |]
     additionalPropertiesAllowed (Choice1of2 True) = True
