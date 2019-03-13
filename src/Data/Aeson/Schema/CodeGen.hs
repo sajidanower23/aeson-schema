@@ -199,8 +199,8 @@ generateSchema decName name schema = case schemaDRef schema of
     checkExtends exts = noBindS $ doE $ flip map exts $ flip assertValidates (varE val) . lift
     checkers = catMaybes
       [ checkEnum <$> schemaEnum schema
-      , if null (schemaDisallow schema) then Nothing else Just (checkDisallow $ schemaDisallow schema)
-      , if null (schemaExtends schema) then Nothing else Just (checkExtends $ schemaExtends schema)
+      -- , if null (schemaDisallow schema) then Nothing else Just (checkDisallow $ schemaDisallow schema)
+      -- , if null (schemaExtends schema) then Nothing else Just (checkExtends $ schemaExtends schema)
       ]
     wrap parser = if null checkers
       then parser
@@ -348,7 +348,7 @@ generateObject decName name schema = case (propertiesList, schemaAdditionalPrope
                    , [| Just . $toExpr |]
                    , Just $ valD (conP 'Success [varP defaultName]) (normalB [| parse $fromExpr $(lift defaultValue) |]) []
                    )
-          Nothing -> return $ {- if schemaRequired propertySchema -- TODO
+          Nothing -> return {- $  if schemaRequired propertySchema -- TODO
             then ( propertyName
                  , typ
                  , [| maybe (fail $(lift $ "required property " ++ unpack fieldName ++ " missing")) $fromExpr $lookupProperty |]

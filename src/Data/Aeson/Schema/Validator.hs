@@ -40,14 +40,10 @@ validate graph schema val = case schemaDRef schema of
   Just ref -> case M.lookup ref graph of
     Nothing -> validationError "referenced schema is not in map"
     Just referencedSchema -> validate graph referencedSchema val
-  Nothing -> L.concat
-    [ case schemaType schema of
-        [t] -> validateType t
-        ts  -> if L.any L.null (map validateType ts) then [] else validationError "no type matched"
-    , maybeCheck checkEnum $ schemaEnum schema
-    , concatMap validateTypeDisallowed (schemaDisallow schema)
-    , concatMap (flip (validate graph) val) (schemaExtends schema)
-    ]
+  Nothing -> (case schemaType schema of
+     [t] -> validateType t
+     ts  -> if L.any L.null (map validateType ts) then []
+            else validationError "no type matched") ++ maybeCheck checkEnum (schemaEnum schema)
   where
     validateType (Choice1of2 t) = case (t, val) of
       (StringType, String str) -> validateString schema str
