@@ -6,7 +6,7 @@
 -- become unwieldy. This module defines data types and functions for any number
 -- of choices from 2 to 20. The naming schema is based on Data.Either.
 -- For example:
--- 
+--
 -- @
 -- data Choice3 a b c = Choice1of3 a | Choice2of3 b | Choice3of3 c deriving (...)
 -- choice3 :: (a -> x) -> (b -> x) -> (c -> x) -> Choice3 a b c -> x
@@ -18,9 +18,10 @@
 module Data.Aeson.Schema.Choice where
 
 import           Data.Aeson.Schema.Choice.TH (generateChoice)
+import           Data.Monoid                 ((<>))
 import           Language.Haskell.TH         (mkName)
 import           Language.Haskell.TH.Lift    (deriveLiftMany)
 
 $(fmap concat (mapM generateChoice [2..20]))
 
-$(deriveLiftMany $ map (mkName . ("Choice" ++) . show) ([2..20] :: [Int]))
+$(deriveLiftMany $ map (mkName . ("Choice" <>) . show) ([2..20] :: [Int]))

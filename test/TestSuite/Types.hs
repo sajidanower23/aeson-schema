@@ -55,9 +55,9 @@ readSchemaTests dir' = do
     jsonBS <- LBS.readFile fullPath
     case parse (skipSpace *> json <* skipSpace) jsonBS of
       Done _ value -> case parseEither parseJSON value of
-        Left err -> fail $ "couldn't parse file '" ++ fullPath ++ "': " ++ err
+        Left err -> fail $ "couldn't parse file '" <> fullPath <> "': " <> err
         Right v  -> return $ map (prependFileName file) v
-      _ -> fail $ "not a valid json file: " ++ fullPath
+      _ -> fail $ "not a valid json file: " <> fullPath
   where
     prependFileName fileName schemaTest = schemaTest
       { schemaTestDescription = pack fileName <> ": " <> schemaTestDescription schemaTest

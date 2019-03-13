@@ -281,7 +281,7 @@ typecheckGenerate forkLift schema = ioProperty $ do
 withCodeTempFile :: Text -> (FilePath -> IO a) -> IO a
 withCodeTempFile code action = case maybeName of
   Nothing -> fail "couldn't find module name"
-  Just name -> withSystemTempFile (unpack name ++ ".hs") $ \path handle -> do
+  Just name -> withSystemTempFile (unpack name <> ".hs") $ \path handle -> do
     TIO.hPutStrLn handle code
     hClose handle
     action path
@@ -328,13 +328,13 @@ assertValidates shouldBeValid forkLift graph schema value = do
   valueExpr <- flip replaceHiddenModules repMap <$> runQ (THS.lift value)
   let typ = flip replaceHiddenModules repMap $ typeMap M.! "a"
   let validatesExpr = unlines
-        [ "case DAT.parseEither parseJSON (" ++ pprint valueExpr ++ ") :: Either String (" ++ pprint typ ++ ") of"
+        [ "case DAT.parseEither parseJSON (" <> pprint valueExpr <> ") :: Either String (" <> pprint typ <> ") of"
         , "  Prelude.Left e  -> Just e"
         , "  Prelude.Right _ -> Nothing"
         ]
   result <- withCodeTempFile code $ \path -> carry forkLift $ do
     Hint.loadModules [path]
-    Hint.setImportsQ $ map (,Nothing) (getUsedModules (valueExpr, typ)) ++
+    Hint.setImportsQ $ map (,Nothing) (getUsedModules (valueExpr, typ)) <>
       [ ("TestSchema", Nothing)
       , ("Prelude", Nothing)
       , ("Data.Aeson.Types", Just "DAT")
@@ -349,7 +349,7 @@ assertValidates shouldBeValid forkLift graph schema value = do
       (False, Just _) -> return ()
       (True, Just e)  -> do
         printInfo
-        HU.assertFailure $ "value should have beean parsed but was rejected with error '" ++ e ++ "'"
+        HU.assertFailure $ "value should have beean parsed but was rejected with error '" <> e <> "'"
       (False, Nothing) -> do
         printInfo
         HU.assertFailure "value should have been rejected"

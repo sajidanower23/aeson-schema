@@ -31,6 +31,7 @@ import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict              as H
 import qualified Data.Map                         as M
 import           Data.Maybe                       (catMaybes)
+import           Data.Monoid                      ((<>))
 import           Data.Scientific                  (Scientific)
 import           Data.Text                        (Text, unpack)
 import qualified Data.Vector                      as V
@@ -48,7 +49,7 @@ instance Eq Pattern where
   (==) = (==) `on` patternSource
 
 instance Show Pattern where
-  show pattern = "let Right p = mkPattern (" ++ show (patternSource pattern) ++ ") in p"
+  show pattern = "let Right p = mkPattern (" <> show (patternSource pattern) <> ") in p"
 
 instance FromJSON Pattern where
   parseJSON (String s) = mkPattern s
@@ -63,7 +64,7 @@ parseJSONLimit :: Text
                -> Object
                -> Parser (Maybe Limit)
 parseJSONLimit d o = do
-  r <- o .:? ("exclusive" `mappend` d)
+  r <- o .:? ("exclusive" <> d)
   case r of
     Nothing -> do
       r <- o .:? d
@@ -97,7 +98,7 @@ instance FromJSON SchemaType where
     "array"   -> return ArrayType
     "null"    -> return NullType
     "any"     -> return AnyType
-    _         -> fail $ "not a valid type: " ++ unpack t
+    _         -> fail $ "not a valid type: " <> unpack t
   parseJSON _ = fail "not a string"
 
 instance Lift SchemaType where

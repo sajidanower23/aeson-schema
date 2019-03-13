@@ -1,8 +1,8 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 
 module Data.Aeson.Schema.CodeGenM
   ( Declaration (..)
@@ -18,7 +18,7 @@ module Data.Aeson.Schema.CodeGenM
   , askEnv
   ) where
 
-import qualified Control.Monad.Fail as      Fail
+import qualified Control.Monad.Fail         as Fail
 import           Control.Monad.IO.Class     (MonadIO (..))
 import           Control.Monad.RWS.Lazy     (MonadReader (..), MonadState (..),
                                              MonadWriter (..), RWST (..))
@@ -53,7 +53,7 @@ type StringSet = HS.HashSet String
 codeGenNewName :: String -> StringSet -> (Name, StringSet)
 codeGenNewName s used = (Name (mkOccName free) NameS, HS.insert free used)
   where
-    free = head $ dropWhile (`HS.member` used) $ (if validName s then (s:) else id) $ map (\i -> s ++ "_" ++ show i) ([1..] :: [Int])
+    free = head $ dropWhile (`HS.member` used) $ (if validName s then (s:) else id) $ map (\i -> s <> "_" <> show i) ([1..] :: [Int])
     -- taken from http://www.haskell.org/haskellwiki/Keywords
     haskellKeywords = HS.fromList
       [ "as", "case", "of", "class", "data", "data family", "data instance"
@@ -78,26 +78,26 @@ instance Fail.MonadFail (CodeGenM s) where
 
 -- | Extra options used for the codegen
 data Options = Options
- { _extraModules :: [String]
+ { _extraModules        :: [String]
   -- ^ Needed modules that are not found by 'getUsedModules'.
  , _derivingTypeclasses :: [Name]
   -- ^ Classes to put in the @deriving@ clause
- , _replaceModules :: M.Map String String
+ , _replaceModules      :: M.Map String String
   -- ^ A 'M.Map' of modules which we should replace with other ones
   -- when references to them are found. Useful for example when the
   -- codegen is hitting a hidden module that's not already gotten rid
   -- of in 'Data.Aeson.Schema.Helpers.replaceHiddenModules'.
- , _languageExtensions :: [Text]
+ , _languageExtensions  :: [Text]
   -- ^ List of @LANGUAGE@ extensions to enable in the module. Note that
   -- these aren't checked for validity.
   --
   -- @'_languageExtensions' = [ "LambdaCase" ]@
- , _ghcOptsPragmas :: [Text]
+ , _ghcOptsPragmas      :: [Text]
   -- ^ List of @OPTIONS_GHC@ to turn on in the module. Note that these
   -- aren't checked for validity.
   --
   -- @'_ghcOptsPragmas' = [ "-fno-warn-name-shadowing" ]@
- , _extraInstances :: Name -> [DecQ]
+ , _extraInstances      :: Name -> [DecQ]
   -- ^ Supplied a 'Name' of the type in question (after mangling),
   -- potentially generate an instance for the type. For example, to
   -- generate an empty 'Enum' instance for every data type we make,
@@ -203,7 +203,7 @@ genRecord name fields classes = Declaration <$> dataDec
     renderComment = T.intercalate "\n" . map ("-- " <>) . T.lines
     recordBlock :: [Text] -> Text
     recordBlock [] = dataLine <> " " <> derivingClause
-    recordBlock (l:ls) = T.unlines $ [dataLine] ++ map indent (["{ " <> l] ++ map (", " <>) ls ++ ["} " <> derivingClause])
+    recordBlock (l:ls) = T.unlines $ dataLine : map indent (["{ " <> l] <> map (", " <>) ls <> ["} " <> derivingClause])
     indent :: Text -> Text
     indent = ("  " <>)
 

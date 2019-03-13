@@ -1,5 +1,5 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE CPP #-}
 
 module Data.Aeson.Schema.Choice.TH
   ( generateChoice
@@ -8,16 +8,17 @@ module Data.Aeson.Schema.Choice.TH
 import           Control.Applicative (Alternative (..))
 import           Control.Monad       (forM)
 import           Data.Aeson          (FromJSON (..), ToJSON (..))
+import           Data.Monoid         ((<>))
 import           Language.Haskell.TH
 import           Test.QuickCheck     (Arbitrary (..), oneof)
 
 generateChoice :: Int -> Q [Dec]
 generateChoice n | n < 2 = return []
 generateChoice n = do
-  tyName <- newName $ "Choice" ++ show n
+  tyName <- newName $ "Choice" <> show n
   let tyParamNames = map (mkName . return) $ take n ['a'..]
   let tyParams = map varT tyParamNames
-  conNames <- mapM (newName . \i -> "Choice" ++ show i ++ "of" ++ show n) [1..n]
+  conNames <- mapM (newName . \i -> "Choice" <> show i <> "of" <> show n) [1..n]
 
 #if MIN_VERSION_template_haskell(2,12,0)
   let cons = zipWith normalC conNames $ map ((:[]) . bangType (pure $ Bang NoSourceUnpackedness NoSourceStrictness)) tyParams
@@ -51,36 +52,36 @@ generateChoice n = do
                                     (normalB $ varE 'oneof `appE` listE (map (\con -> [| $(conE con) <$> arbitrary |]) conNames))
                                     []
                              ]
-  let choiceN = mkName $ "choice" ++ show n
+  let choiceN = mkName $ "choice" <> show n
   let resultT = mkName "res"
   choiceFunDec <- sigD choiceN
-                     $ forallT (map PlainTV $ tyParamNames ++ [resultT])
+                     $ forallT (map PlainTV $ tyParamNames <> [resultT])
                                (cxt [])
                              $ functionT (map (`arrT` varT resultT) tyParams)
                                        $ appConT tyName tyParams `arrT` varT resultT
   choiceFun <- funD choiceN
                   $ let f = mkName "f"
                         v = mkName "v"
-                    in zipWith (\i con -> clause (replicate i wildP ++ [varP f] ++ replicate (n-i-1) wildP ++ [conP con [varP v]])
+                    in zipWith (\i con -> clause (replicate i wildP <> [varP f] <> replicate (n-i-1) wildP <> [conP con [varP v]])
                                                  (normalB $ varE f `appE` varE v)
                                                  []) [0..] conNames
 
-  let mapChoiceN = mkName $ "mapChoice" ++ show n
+  let mapChoiceN = mkName $ "mapChoice" <> show n
   let typeAs = mkNames 'a'
   let typeBs = mkNames 'b'
   mapChoiceFunDec <- sigD mapChoiceN
-                        $ forallT (map PlainTV $ typeAs ++ typeBs)
+                        $ forallT (map PlainTV $ typeAs <> typeBs)
                                   (cxt [])
                                 $ functionT (zipWith arrT (map varT typeAs) (map varT typeBs))
                                           $ appConT tyName (map varT typeAs) `arrT` appConT tyName (map varT typeBs)
   mapChoiceFun <- funD mapChoiceN
                      $ let f = mkName "f"
                            v = mkName "v"
-                       in zipWith (\i con -> clause (replicate i wildP ++ [varP f] ++ replicate (n-i-1) wildP ++ [conP con [varP v]])
+                       in zipWith (\i con -> clause (replicate i wildP <> [varP f] <> replicate (n-i-1) wildP <> [conP con [varP v]])
                                                     (normalB $ conE con `appE` (varE f `appE` varE v))
                                                     []) [0..] conNames
   choiceIofNFuns <- fmap concat $ forM (zip [1..n] conNames) $ \(i, con) -> do
-    let choiceIofN = mkName $ "choice" ++ show i ++ "of" ++ show n ++ "s"
+    let choiceIofN = mkName $ "choice" <> show i <> "of" <> show n <> "s"
     typeDec <- sigD choiceIofN
                   $ forallT (map PlainTV tyParamNames)
                             (cxt [])
@@ -92,7 +93,7 @@ generateChoice n = do
                                                       , noBindS (varE c)
                                                       ]) []]
     return [typeDec, funDef]
-  return $ [dataDec, instToJSON, instFromJSON, instArbitrary, choiceFunDec, choiceFun, mapChoiceFunDec, mapChoiceFun] ++ choiceIofNFuns
+  return $ [dataDec, instToJSON, instFromJSON, instArbitrary, choiceFunDec, choiceFun, mapChoiceFunDec, mapChoiceFun] <> choiceIofNFuns
   where
     genToJSONClause :: Name -> Name -> ClauseQ
     genToJSONClause con param = clause [conP con [varP param]] (normalB . appE (varE 'toJSON) . varE $ param) []

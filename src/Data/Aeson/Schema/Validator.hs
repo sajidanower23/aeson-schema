@@ -11,6 +11,7 @@ import qualified Data.HashMap.Strict       as H
 import qualified Data.List                 as L
 import qualified Data.Map                  as M
 import           Data.Maybe                (isNothing)
+import           Data.Monoid               ((<>))
 import           Data.Scientific           (Scientific, isInteger)
 import           Data.Text                 (Text, length, unpack)
 import qualified Data.Vector               as V
@@ -43,7 +44,7 @@ validate graph schema val = case schemaDRef schema of
   Nothing -> (case schemaType schema of
      [t] -> validateType t
      ts  -> if L.any L.null (map validateType ts) then []
-            else validationError "no type matched") ++ maybeCheck checkEnum (schemaEnum schema)
+            else validationError "no type matched") <> maybeCheck checkEnum (schemaEnum schema)
   where
     validateType (Choice1of2 t) = case (t, val) of
       (StringType, String str) -> validateString schema str
@@ -59,7 +60,7 @@ validate graph schema val = case schemaDRef schema of
         Object obj -> validateObject graph schema obj
         Array arr  -> validateArray graph schema arr
         _          -> valid
-      (typ, _) -> validationError $ "type mismatch: expected " ++ show typ ++ " but got " ++ getType val
+      (typ, _) -> validationError $ "type mismatch: expected " <> show typ <> " but got " <> getType val
     validateType (Choice2of2 s) = validate graph s val
 
     getType :: A.Value -> String
@@ -83,7 +84,7 @@ validate graph schema val = case schemaDRef schema of
     isType _ _                      = False
 
     validateTypeDisallowed (Choice1of2 t) = if isType val t
-        then validationError $ "values of type " ++ show t ++ " are not allowed here"
+        then validationError $ "values of type " <> show t <> " are not allowed here"
         else valid
     validateTypeDisallowed (Choice2of2 s) = assert (not . L.null $ validate graph s val) "value disallowed"
 
@@ -103,9 +104,9 @@ validateString schema str = L.concat
   , maybeCheck checkFormat $ schemaFormat schema
   ]
   where
-    checkMinLength l = assert (length str >= l) $ "length of string must be at least " ++ show l
-    checkMaxLength l = assert (length str <= l) $ "length of string must be at most " ++ show l
-    checkPattern (Pattern source compiled) = assert (match compiled $ unpack str) $ "string must match pattern " ++ show source
+    checkMinLength l = assert (length str >= l) $ "length of string must be at least " <> show l
+    checkMaxLength l = assert (length str <= l) $ "length of string must be at most " <> show l
+    checkPattern (Pattern source compiled) = assert (match compiled $ unpack str) $ "string must match pattern " <> show source
     checkFormat format = maybe valid validationError $ validateFormat format str
 
 validateNumber :: Schema ref -> Scientific -> [ValidationError]
@@ -116,21 +117,21 @@ validateNumber schema num = L.concat
   ]
   where
     checkMinimum (m, excl) = if excl
-      then assert (num > m)  $ "number must be greater than " ++ show m
-      else assert (num >= m) $ "number must be greater than or equal " ++ show m
+      then assert (num > m)  $ "number must be greater than " <> show m
+      else assert (num >= m) $ "number must be greater than or equal " <> show m
     checkMaximum (m, excl) = if excl
-      then assert (num < m)  $ "number must be less than " ++ show m
-      else assert (num <= m) $ "number must be less than or equal " ++ show m
-    checkMultipleOf divisor = assert (num `isMultipleOf` divisor) $ "number must be a multiple of " ++ show divisor
+      then assert (num < m)  $ "number must be less than " <> show m
+      else assert (num <= m) $ "number must be less than or equal " <> show m
+    checkMultipleOf divisor = assert (num `isMultipleOf` divisor) $ "number must be a multiple of " <> show divisor
 
 validateInteger :: Schema ref -> Scientific -> [ValidationError]
 validateInteger schema num =
-  assert (isInteger num) "number must be an integer" ++
+  assert (isInteger num) "number must be an integer" <>
   validateNumber schema num
 
 validateObject :: Ord ref => Graph Schema ref -> Schema ref -> A.Object -> [ValidationError]
 validateObject graph schema obj =
-  concatMap (uncurry checkKeyValue) (H.toList obj) ++
+  concatMap (uncurry checkKeyValue) (H.toList obj) <>
   concatMap checkRequiredProperty (schemaRequired schema)
   where
     checkKeyValue k v = L.concat
@@ -145,16 +146,16 @@ validateObject graph schema obj =
         property = H.lookup k (schemaProperties schema)
         matchingPatternsProperties = filter (flip match (unpack k) . patternCompiled . fst) $ schemaPatternProperties schema
         checkAdditionalProperties ap = case ap of
-          Choice1of2 b -> assert b $ "additional property " ++ unpack k ++ " is not allowed"
+          Choice1of2 b -> assert b $ "additional property " <> unpack k <> " is not allowed"
           Choice2of2 s -> validate graph s v
         checkDependencies deps = case deps of
           Choice1of2 props -> L.concat $ flip map props $ \prop -> case H.lookup prop obj of
-            Nothing -> validationError $ "property " ++ unpack k ++ " depends on property " ++ show prop
+            Nothing -> validationError $ "property " <> unpack k <> " depends on property " <> show prop
             Just _ -> valid
           Choice2of2 depSchema -> validate graph depSchema (Object obj)
 
     checkRequiredProperty key = case H.lookup key obj of
-      Nothing -> validationError $ "required property " ++ unpack key ++ " is missing"
+      Nothing -> validationError $ "required property " <> unpack key <> " is missing"
       Just _ -> valid
 
 validateArray :: Ord ref => Graph Schema ref -> Schema ref -> A.Array -> [ValidationError]
@@ -167,8 +168,8 @@ validateArray graph schema arr = L.concat
   where
     len = V.length arr
     list = V.toList arr
-    checkMinItems m = assert (len >= m) $ "array must have at least " ++ show m ++ " items"
-    checkMaxItems m = assert (len <= m) $ "array must have at most " ++ show m ++ " items"
+    checkMinItems m = assert (len >= m) $ "array must have at least " <> show m <> " items"
+    checkMaxItems m = assert (len <= m) $ "array must have at most " <> show m <> " items"
     checkUnique = assert (vectorUnique arr) "all array items must be unique"
     checkItems items = case items of
       Choice1of2 s -> assert (V.all (L.null . validate graph s) arr) "all items in the array must validate against the schema given in 'items'"
@@ -177,6 +178,6 @@ validateArray graph schema arr = L.concat
             checkAdditionalItems ai = case ai of
               Choice1of2 b -> assert (b || L.null additionalItems) "no additional items allowed"
               Choice2of2 additionalSchema -> concatMap (validate graph additionalSchema) additionalItems
-        in L.concat (zipWith (validate graph) ss list) ++
+        in L.concat (zipWith (validate graph) ss list) <>
            checkAdditionalItems (schemaAdditionalItems schema)
 

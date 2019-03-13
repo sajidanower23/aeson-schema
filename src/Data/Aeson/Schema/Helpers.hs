@@ -13,6 +13,7 @@ import           Data.Generics          (Data, everything, everywhere, mkQ, mkT)
 import           Data.List              (nub)
 import qualified Data.Map               as M
 import           Data.Maybe             (maybeToList)
+import           Data.Monoid            ((<>))
 import           Data.Scientific        (Scientific, base10Exponent,
                                          coefficient)
 import           Data.Text              (Text, unpack)
@@ -80,7 +81,7 @@ formatValidators =
   -- Should be valid according to https://www.ecma-international.org/publications/files/ECMA-ST/Ecma-262.pdf
   , ( "regex"
     , Just $ \str -> case makeRegexM (unpack str) :: Maybe Regex of
-        Nothing -> Just $ "not a regex: " ++ show str
+        Nothing -> Just $ "not a regex: " <> show str
         Just _  -> Nothing
     )
 
@@ -127,10 +128,10 @@ replaceHiddenModules d replaceMap = everywhere (mkT replaceModule) d
     replaceModule :: Name -> Name
     replaceModule n = case nameModule n of
       Just "Data.Aeson.Types.Internal" | nameBase n `elem` ["I", "D"] ->
-        mkName $ "Data.Attoparsec.Number." ++ nameBase n
+        mkName $ "Data.Attoparsec.Number." <> nameBase n
       Just "GHC.Tuple" -> mkName $ nameBase n
       Just m -> case M.lookup m replaceMap of
-        Just r  -> mkName $ r ++ ('.' : nameBase n)
+        Just r  -> mkName $ r <> ('.' : nameBase n)
         Nothing -> n
       _ -> n
 
@@ -144,7 +145,8 @@ cleanPatterns = everywhere $ mkT replacePattern
 
 -- | Extracts a list of used modules from a TH code tree.
 getUsedModules :: Data a => a -> [String]
-getUsedModules = nub . everything (++) ([] `mkQ` extractModule)
+getUsedModules = nub . everything (<>) ([] `mkQ` extractModule)
   where
     extractModule :: Name -> [String]
     extractModule = maybeToList . nameModule
+

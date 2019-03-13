@@ -8,6 +8,7 @@ import qualified Test.HUnit                     as HU
 
 import           Data.Aeson                     (Value)
 import qualified Data.Map                       as M
+import           Data.Monoid                    ((<>))
 import           Data.Text                      (Text, unpack)
 
 import           Data.Aeson.Schema.Types
@@ -30,7 +31,7 @@ assertInvalid graph schema value = case validate graph schema value of
   _  -> return ()
 
 tests :: [SchemaTest] -> [Test]
-tests schemaTests = examples testCase assertValid assertInvalid ++ map buildSchemaTest schemaTests
+tests schemaTests = examples testCase assertValid assertInvalid <> map buildSchemaTest schemaTests
   where
     buildSchemaTest :: SchemaTest -> Test
     buildSchemaTest schemaTest = testGroup testName cases
