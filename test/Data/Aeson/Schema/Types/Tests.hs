@@ -44,8 +44,6 @@ tests =
             , schemaItems = Just $ Choice2of2 [schemaWithRef "e", schemaWithRef "f"]
             , schemaAdditionalItems = Choice2of2 $ schemaWithRef "g"
             , schemaDependencies = H.fromList [("aProperty", Choice2of2 $ schemaWithRef "h")]
-            , schemaDisallow = [Choice2of2 $ schemaWithRef "i"]
-            , schemaExtends = [schemaWithRef "j"]
             , schemaDRef = Just "k"
             }
       map (:[]) ['a'..'k'] HU.@=? toList schema

@@ -101,14 +101,10 @@ arbitrarySchema 0 = return empty
 arbitrarySchema depth = do
   typ <- shortListOf1 (choice2of arbitrary subSchema)
   required <- arbitrary
-  disallow <- rareShortListOf (choice2of arbitrary subSchema)
-  extends <- rareShortListOf subSchema
   description <- arbitrary
   let sch0 = empty
         { schemaType = typ
         , schemaRequired = required
-        , schemaDisallow = disallow
-        , schemaExtends = extends
         , schemaDescription = description
         }
   sch1 <- flip (foldl (>=>) return) sch0
