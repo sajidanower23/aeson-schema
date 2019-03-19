@@ -69,7 +69,8 @@ test-suite tests
                        Data.Aeson.Schema.Choice.Tests,
                        Data.Aeson.Schema.CodeGen.Tests,
                        Data.Aeson.Schema.Types.Tests,
-                       Data.Aeson.Schema.Validator.Tests
+                       Data.Aeson.Schema.Validator.Tests,
+                       Paths_aeson_schema
   extensions:          OverloadedStrings
   build-depends:       base,
                        aeson,
