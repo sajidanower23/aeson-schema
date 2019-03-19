@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
 
@@ -64,11 +65,9 @@ parseJSONLimit :: Text
                -> Object
                -> Parser (Maybe Limit)
 parseJSONLimit d o = do
-  r <- o .:? ("exclusive" <> d)
-  case r of
+  o .:? ("exclusive" <> d) >>= \case
     Nothing -> do
-      r <- o .:? d
-      case r of
+      o .:? d >>= \case
         Nothing -> pure Nothing
         Just n  -> pure . Just $ (n, False)
     Just n -> pure . Just $ (n, True)
