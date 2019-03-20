@@ -9,6 +9,7 @@ import           Data.Aeson.Schema.CodeGen
 import           Data.Aeson.Schema.CodeGenM (defaultOptions)
 
 import           Data.Text
+import           Data.Text.IO               as T (writeFile)
 
 import qualified Data.ByteString.Lazy       as L
 
@@ -26,8 +27,8 @@ run = do
           Success schema' -> do
             let schema = schema' { schemaDRef = Just "parsedSchema"}
                 graph = M.singleton "parsedSchema" schema
-            runQ (generate graph defaultOptions) >>= \(code, m) -> do
-              print m
-              print code
+            runQ (generateModule "ExampleJson" graph defaultOptions) >>= \(code, m) -> do
+              -- print m
+              T.writeFile "ExampleJson.hs" code
             -- error "lol"
 
